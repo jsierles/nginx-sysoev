@@ -1,0 +1,12 @@
+# example virtual host using mix of IP-, name-, and port-based configuration
+server {
+	listen   somename.local:80;
+	server_name  somename.local *.somename.local;
+
+	access_log  /var/log/nginx/somename.local.access.log;
+
+	location / {
+		root   /var/www/somename.local;
+		index  index.html index.htm;
+	}
+}

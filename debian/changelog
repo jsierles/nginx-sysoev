@@ -1,0 +1,5 @@
+nginx (0.7.40-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Sun, 22 Feb 2009 01:44:21 +0300

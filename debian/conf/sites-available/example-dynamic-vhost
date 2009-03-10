@@ -1,0 +1,10 @@
+server {
+	listen   8080;
+
+	access_log  /var/log/nginx/$host.access.log;
+
+	location / {
+		root   /var/www/$host;
+		index  index.html index.htm;
+	}
+}
