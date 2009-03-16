@@ -1,3 +1,9 @@
+nginx (0.7.42-3) unstable; urgency=low
+
+  * Enabled default site only for new install
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Mon, 16 Mar 2009 18:41:40 +0300
+
 nginx (0.7.42-2) unstable; urgency=low
 
   * Enable default site only if first install and don't try disable
