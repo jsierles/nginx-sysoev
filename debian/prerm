@@ -14,14 +14,6 @@ case "$1" in
             fi
         fi
 
-	if [ -x /usr/sbin/ngxdissite ]; then
-	    ls /etc/nginx/sites-enabled/* | sed -e 's,/etc/nginx/sites-enabled/,,g' \
-		| while read sitename
-	    do
-		/usr/sbin/ngxdissite $sitename
-	    done
-	fi
-
     ;;
 
     upgrade|failed-upgrade)

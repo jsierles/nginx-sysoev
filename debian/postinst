@@ -6,10 +6,6 @@ case "$1" in
 
     configure)
 
-        if [ -x /usr/sbin/ngxensite ]; then
-	    /usr/sbin/ngxensite default
-        fi
-
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
@@ -51,6 +47,14 @@ then
 		fi
 	fi
 fi
+
+#set up default site
+if [ $UPGRADE = new_install -a \
+    ! -L /etc/nginx/sites-enabled/000-default -a \
+    ! -f /etc/nginx/sites-enabled/000-default ]; then
+    /usr/sbin/ngxensite default
+fi
+
 
 #DEBHELPER#
 
