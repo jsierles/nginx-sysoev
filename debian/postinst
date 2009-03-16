@@ -1,25 +1,14 @@
-#!/bin/sh
+#!/bin/sh -e
 
-set -e
+if [ "$1" != "configure" ]; then
+        exit 0
+fi
 
-case "$1" in
+#set up default site
+if [ -z "$(ls /etc/nginx/sites-enabled/)" ]; then
+    /usr/sbin/ngxensite default
+fi
 
-    configure)
-
-    ;;
-
-    abort-upgrade|abort-remove|abort-deconfigure)
-
-    ;;
-
-    *)
-
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-
-    ;;
-
-esac
 
 if [ -x "/etc/init.d/nginx" ]
 then
@@ -47,14 +36,6 @@ then
 		fi
 	fi
 fi
-
-#set up default site
-if [ $UPGRADE = new_install -a \
-    ! -L /etc/nginx/sites-enabled/000-default -a \
-    ! -f /etc/nginx/sites-enabled/000-default ]; then
-    /usr/sbin/ngxensite default
-fi
-
 
 #DEBHELPER#
 
