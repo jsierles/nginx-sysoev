@@ -1,3 +1,9 @@
+nginx (0.7.47-1) unstable; urgency=low
+
+  * nginx 0.7.47
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Thu, 02 Apr 2009 14:57:49 +0400
+
 nginx (0.7.46-1) unstable; urgency=low
 
   * nginx 0.7.46
