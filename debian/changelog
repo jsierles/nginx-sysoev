@@ -1,3 +1,9 @@
+nginx (0.7.53-1) unstable; urgency=low
+
+  * nginx 0.7.53
+
+ -- Igor Sysoev <igor@sysoev.ru>  Tue, 28 Apr 2009 14:56:58 +0400
+
 nginx (0.7.52-1) unstable; urgency=low
 
   * nginx 0.7.52
