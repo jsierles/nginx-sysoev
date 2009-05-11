@@ -1,3 +1,10 @@
+nginx (0.7.56-1) unstable; urgency=low
+
+  [ Igor Sysoev ]
+  * nginx 0.7.56
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Mon, 11 May 2009 18:24:51 +0400
+
 nginx (0.7.55-1) unstable; urgency=low
 
   [ Igor Sysoev ]
