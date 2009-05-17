@@ -1,7 +1,17 @@
 
+Changes with nginx 0.6.37                                        18 May 2009
+
+    *) Feature: Microsoft specific "AUTH LOGIN with User Name" mode support 
+       in mail proxy server.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: nginx could not be built on platforms different from i386, 
+       amd64, sparc, and ppc; the bug had appeared in 0.6.36.
+
+
 Changes with nginx 0.6.36                                        02 Apr 2009
 
-    *) Change: now the "Invalid argument" error returned by
+    *) Change: now the "Invalid argument" error returned by 
        setsockopt(TCP_NODELAY) on Solaris, is ignored.
 
     *) Change: now POSTs without "Content-Length" header line are allowed.
@@ -19,28 +29,28 @@ Changes with nginx 0.6.36                                        02 Apr 2009
     *) Bugfix: compatibility with Tru64 UNIX.
        Thanks to Dustin Marquess.
 
-    *) Bugfix: a "ssl_engine" directive did not use a SSL-accelerator for
+    *) Bugfix: a "ssl_engine" directive did not use a SSL-accelerator for 
        asymmetric ciphers.
        Thanks to Marcin Gozdalik.
 
-    *) Bugfix: in a redirect rewrite directive original arguments were
+    *) Bugfix: in a redirect rewrite directive original arguments were 
        concatenated with new arguments by a "?" rather than an "&";
        the bug had appeared in 0.1.18.
        Thanks to Maxim Dounin.
 
     *) Bugfix: nginx could not be built on AIX.
 
-    *) Bugfix: a double response might be returned if the epoll or rtsig
-       methods are used and a redirect was returned to a request with
+    *) Bugfix: a double response might be returned if the epoll or rtsig 
+       methods are used and a redirect was returned to a request with 
        body.
        Thanks to Eden Li.
 
-    *) Bugfix: a segmentation fault might occur in worker process if
+    *) Bugfix: a segmentation fault might occur in worker process if 
        "resolver" directive was used in SMTP proxy.
 
     *) Bugfix: fastcgi_store stored files not always.
 
-    *) Bugfix: nginx did not process a FastCGI server response, if the
+    *) Bugfix: nginx did not process a FastCGI server response, if the 
        server send too many messages to stderr before response.
 
 
@@ -3063,7 +3073,7 @@ Changes with nginx 0.1.18                                        09 Feb 2005
     *) Bugfix: the proxy_set_x_var and fastcgi_set_var directives were not 
        inherited.
 
-    *) Bugfix: in a redirect rewrite directive arguments were concatenated
+    *) Bugfix: in a redirect rewrite directive arguments were concatenated 
        with URI by an "&" rather than a "?".
 
     *) Bugfix: the lines without trailing ";" in the file being included by 
