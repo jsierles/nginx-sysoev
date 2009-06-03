@@ -205,6 +205,7 @@ ngx_http_gzip_static_handler(ngx_http_request_t *r)
     h->value.data = (u_char *) "gzip";
 
     r->headers_out.content_encoding = h;
+    r->ignore_content_encoding = 1;
 
     /* we need to allocate all before the header would be sent */
 
@@ -250,7 +251,7 @@ ngx_http_gzip_static_create_conf(ngx_conf_t *cf)
 
     conf = ngx_palloc(cf->pool, sizeof(ngx_http_gzip_static_conf_t));
     if (conf == NULL) {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     conf->enable = NGX_CONF_UNSET;

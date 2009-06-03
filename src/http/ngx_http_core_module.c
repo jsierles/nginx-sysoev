@@ -433,11 +433,26 @@ static ngx_command_t  ngx_http_core_commands[] = {
       offsetof(ngx_http_core_loc_conf_t, limit_rate),
       NULL },
 
+    { ngx_string("limit_rate_after"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
+                        |NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, limit_rate_after),
+      NULL },
+
     { ngx_string("keepalive_timeout"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE12,
       ngx_http_core_keepalive,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
+      NULL },
+
+    { ngx_string("keepalive_requests"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, keepalive_requests),
       NULL },
 
     { ngx_string("satisfy"),
@@ -1326,8 +1341,13 @@ ngx_http_update_location_config(ngx_http_request_t *r)
 
     r->request_body_in_single_buf = clcf->client_body_in_single_buffer;
 
-    if (r->keepalive && clcf->keepalive_timeout == 0) {
-        r->keepalive = 0;
+    if (r->keepalive) {
+        if (clcf->keepalive_timeout == 0) {
+            r->keepalive = 0;
+
+        } else if (r->connection->requests >= clcf->keepalive_requests) {
+            r->keepalive = 0;
+        }
     }
 
     if (!clcf->tcp_nopush) {
@@ -1530,38 +1550,38 @@ ngx_http_core_find_static_location(ngx_http_request_t *r,
 void *
 ngx_http_test_content_type(ngx_http_request_t *r, ngx_hash_t *types_hash)
 {
-    u_char       c, *p;
-    ngx_uint_t   i, hash;
+    u_char      c, *lowcase;
+    size_t      len;
+    ngx_uint_t  i, hash;
 
     if (r->headers_out.content_type.len == 0) {
         return NULL;
     }
 
+    len = r->headers_out.content_type_len;
+
     if (r->headers_out.content_type_lowcase == NULL) {
 
-        p = ngx_pnalloc(r->pool, r->headers_out.content_type_len);
-
-        if (p == NULL) {
+        lowcase = ngx_pnalloc(r->pool, len);
+        if (lowcase == NULL) {
             return NULL;
         }
 
-        r->headers_out.content_type_lowcase = p;
+        r->headers_out.content_type_lowcase = lowcase;
 
         hash = 0;
 
-        for (i = 0; i < r->headers_out.content_type_len; i++) {
+        for (i = 0; i < len; i++) {
             c = ngx_tolower(r->headers_out.content_type.data[i]);
             hash = ngx_hash(hash, c);
-            *p++ = c;
+            lowcase[i] = c;
         }
 
         r->headers_out.content_type_hash = hash;
     }
 
-    return ngx_hash_find(types_hash,
-                         r->headers_out.content_type_hash,
-                         r->headers_out.content_type_lowcase,
-                         r->headers_out.content_type_len);
+    return ngx_hash_find(types_hash, r->headers_out.content_type_hash,
+                         r->headers_out.content_type_lowcase, len);
 }
 
 
@@ -2683,14 +2703,14 @@ ngx_http_core_create_main_conf(ngx_conf_t *cf)
 
     cmcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_core_main_conf_t));
     if (cmcf == NULL) {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     if (ngx_array_init(&cmcf->servers, cf->pool, 4,
                        sizeof(ngx_http_core_srv_conf_t *))
         != NGX_OK)
     {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     cmcf->server_names_hash_max_size = NGX_CONF_UNSET_UINT;
@@ -2742,7 +2762,7 @@ ngx_http_core_create_srv_conf(ngx_conf_t *cf)
 
     cscf = ngx_pcalloc(cf->pool, sizeof(ngx_http_core_srv_conf_t));
     if (cscf == NULL) {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     /*
@@ -2755,14 +2775,14 @@ ngx_http_core_create_srv_conf(ngx_conf_t *cf)
                        sizeof(ngx_http_listen_t))
         != NGX_OK)
     {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     if (ngx_array_init(&cscf->server_names, cf->temp_pool, 4,
                        sizeof(ngx_http_server_name_t))
         != NGX_OK)
     {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     cscf->connection_pool_size = NGX_CONF_UNSET_SIZE;
@@ -2873,7 +2893,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
 
     lcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_core_loc_conf_t));
     if (lcf == NULL) {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     /*
@@ -2912,8 +2932,10 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     lcf->send_lowat = NGX_CONF_UNSET_SIZE;
     lcf->postpone_output = NGX_CONF_UNSET_SIZE;
     lcf->limit_rate = NGX_CONF_UNSET_SIZE;
+    lcf->limit_rate_after = NGX_CONF_UNSET_SIZE;
     lcf->keepalive_timeout = NGX_CONF_UNSET_MSEC;
     lcf->keepalive_header = NGX_CONF_UNSET;
+    lcf->keepalive_requests = NGX_CONF_UNSET_UINT;
     lcf->lingering_time = NGX_CONF_UNSET_MSEC;
     lcf->lingering_timeout = NGX_CONF_UNSET_MSEC;
     lcf->resolver_timeout = NGX_CONF_UNSET_MSEC;
@@ -3110,10 +3132,14 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->postpone_output, prev->postpone_output,
                               1460);
     ngx_conf_merge_size_value(conf->limit_rate, prev->limit_rate, 0);
+    ngx_conf_merge_size_value(conf->limit_rate_after, prev->limit_rate_after,
+                              0);
     ngx_conf_merge_msec_value(conf->keepalive_timeout,
                               prev->keepalive_timeout, 75000);
     ngx_conf_merge_sec_value(conf->keepalive_header,
                               prev->keepalive_header, 0);
+    ngx_conf_merge_uint_value(conf->keepalive_requests,
+                              prev->keepalive_requests, 100);
     ngx_conf_merge_msec_value(conf->lingering_time,
                               prev->lingering_time, 30000);
     ngx_conf_merge_msec_value(conf->lingering_timeout,

@@ -377,6 +377,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_use_stale),
       &ngx_http_proxy_next_upstream_masks },
 
+    { ngx_string("proxy_cache_methods"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_conf_set_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_methods),
+      &ngx_http_upstream_cache_method_mask },
+
 #endif
 
     { ngx_string("proxy_temp_path"),
@@ -1876,7 +1883,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
 
     conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_proxy_loc_conf_t));
     if (conf == NULL) {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 
     /*
@@ -1885,7 +1892,8 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
      *     conf->upstream.bufs.num = 0;
      *     conf->upstream.ignore_headers = 0;
      *     conf->upstream.next_upstream = 0;
-     *     conf->upstream.use_stale_cache = 0;
+     *     conf->upstream.cache_use_stale = 0;
+     *     conf->upstream.cache_methods = 0;
      *     conf->upstream.temp_path = NULL;
      *     conf->upstream.hide_headers_hash = { NULL, 0 };
      *     conf->upstream.uri = { 0, NULL };
@@ -1965,7 +1973,7 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->upstream.store != 0) {
         ngx_conf_merge_value(conf->upstream.store,
-                                  prev->upstream.store, 0);
+                              prev->upstream.store, 0);
 
         if (conf->upstream.store_lengths == NULL) {
             conf->upstream.store_lengths = prev->upstream.store_lengths;
@@ -2138,6 +2146,12 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.cache_use_stale,
                               (NGX_CONF_BITMASK_SET
                                |NGX_HTTP_UPSTREAM_FT_OFF));
+
+    if (conf->upstream.cache_methods == 0) {
+        conf->upstream.cache_methods = prev->upstream.cache_methods;
+    }
+
+    conf->upstream.cache_methods |= NGX_HTTP_GET|NGX_HTTP_HEAD;
 
     if (conf->upstream.cache_use_stale & NGX_HTTP_UPSTREAM_FT_OFF) {
         conf->upstream.cache_use_stale = NGX_CONF_BITMASK_SET
@@ -2795,20 +2809,31 @@ ngx_http_proxy_store(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_str_t                  *value;
     ngx_http_script_compile_t   sc;
 
-    if (plcf->upstream.store != NGX_CONF_UNSET || plcf->upstream.store_lengths)
+    if (plcf->upstream.store != NGX_CONF_UNSET
+        || plcf->upstream.store_lengths)
     {
         return "is duplicate";
     }
 
     value = cf->args->elts;
 
-    if (ngx_strcmp(value[1].data, "on") == 0) {
-        plcf->upstream.store = 1;
+    if (ngx_strcmp(value[1].data, "off") == 0) {
+        plcf->upstream.store = 0;
         return NGX_CONF_OK;
     }
 
-    if (ngx_strcmp(value[1].data, "off") == 0) {
-        plcf->upstream.store = 0;
+#if (NGX_HTTP_CACHE)
+
+    if (plcf->upstream.cache != NGX_CONF_UNSET_PTR
+        && plcf->upstream.cache != NULL)
+    {
+        return "is incompatible with \"proxy_cache\"";
+    }
+
+#endif
+
+    if (ngx_strcmp(value[1].data, "on") == 0) {
+        plcf->upstream.store = 1;
         return NGX_CONF_OK;
     }
 
@@ -2851,6 +2876,10 @@ ngx_http_proxy_cache(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     if (ngx_strcmp(value[1].data, "off") == 0) {
         plcf->upstream.cache = NULL;
         return NGX_CONF_OK;
+    }
+
+    if (plcf->upstream.store > 0 || plcf->upstream.store_lengths) {
+        return "is incompatible with \"proxy_store\"";
     }
 
     plcf->upstream.cache = ngx_shared_memory_add(cf, &value[1], 0,
