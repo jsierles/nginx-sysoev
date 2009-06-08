@@ -1,3 +1,13 @@
+nginx (0.8.1-1) unstable; urgency=low
+
+  [ Igor Sysoev ]
+  * nginx 0.8.1
+
+  [ Kirill A. Korinskiy ]
+  * Enable embeded perl
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Mon, 08 Jun 2009 17:45:45 +0400
+
 nginx (0.8.0-1) unstable; urgency=low
 
   [ Igor Sysoev ]
