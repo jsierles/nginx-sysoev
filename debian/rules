@@ -54,6 +54,8 @@ install:
 	dh_installdirs
 	dh_install
 
+	cd objs/src/http/modules/perl && $(MAKE)  install DESTDIR=../../../../../debian/nginx PREFIX=/usr
+
 binary-indep:
 
 binary-arch: install
