@@ -1,3 +1,10 @@
+nginx (0.8.2-1) unstable; urgency=low
+
+  [ Igor Sysoev ]
+  * nginx 0.8.2
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Mon, 15 Jun 2009 13:09:22 +0400
+
 nginx (0.8.1-2) unstable; urgency=low
 
   * Fix a installing perl
