@@ -161,6 +161,12 @@ ngx_http_upstream_header_t  ngx_http_upstream_headers_in[] = {
                  offsetof(ngx_http_upstream_headers_in_t, last_modified),
                  ngx_http_upstream_copy_last_modified, 0, 0 },
 
+    { ngx_string("ETag"),
+                 ngx_http_upstream_process_header_line,
+                 offsetof(ngx_http_upstream_headers_in_t, etag),
+                 ngx_http_upstream_copy_header_line,
+                 offsetof(ngx_http_headers_out_t, etag), 0 },
+
     { ngx_string("Server"),
                  ngx_http_upstream_process_header_line,
                  offsetof(ngx_http_upstream_headers_in_t, server),
@@ -2635,7 +2641,6 @@ ngx_http_upstream_store(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ext.time = -1;
     ext.create_path = 1;
     ext.delete_file = 1;
-    ext.log_rename_error = 1;
     ext.log = r->connection->log;
 
     if (u->headers_in.last_modified) {
@@ -2661,6 +2666,8 @@ ngx_http_upstream_store(ngx_http_request_t *r, ngx_http_upstream_t *u)
             return;
         }
     }
+
+    path.len--;
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "upstream stores \"%s\" to \"%s\"",
