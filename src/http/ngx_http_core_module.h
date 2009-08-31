@@ -24,6 +24,11 @@
 #define NGX_HTTP_GZIP_PROXIED_ANY       0x0200
 
 
+#define NGX_HTTP_AIO_OFF                0
+#define NGX_HTTP_AIO_ON                 1
+#define NGX_HTTP_AIO_SENDFILE           2
+
+
 #define NGX_HTTP_SATISFY_ALL            0
 #define NGX_HTTP_SATISFY_ANY            1
 
@@ -319,6 +324,7 @@ struct ngx_http_core_loc_conf_s {
 
     off_t         client_max_body_size;    /* client_max_body_size */
     off_t         directio;                /* directio */
+    off_t         directio_alignment;      /* directio_alignment */
 
     size_t        client_body_buffer_size; /* client_body_buffer_size */
     size_t        send_lowat;              /* send_lowat */
@@ -347,6 +353,9 @@ struct ngx_http_core_loc_conf_s {
                                            /* client_body_in_singe_buffer */
     ngx_flag_t    internal;                /* internal */
     ngx_flag_t    sendfile;                /* sendfile */
+#if (NGX_HAVE_FILE_AIO)
+    ngx_flag_t    aio;                     /* aio */
+#endif
     ngx_flag_t    tcp_nopush;              /* tcp_nopush */
     ngx_flag_t    tcp_nodelay;             /* tcp_nodelay */
     ngx_flag_t    reset_timedout_connection; /* reset_timedout_connection */
