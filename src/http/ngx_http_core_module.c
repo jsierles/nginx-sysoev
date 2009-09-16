@@ -917,6 +917,7 @@ ngx_http_core_find_config_phase(ngx_http_request_t *r,
                       "client intended to send too large body: %O bytes",
                       r->headers_in.content_length_n);
 
+        (void) ngx_http_discard_request_body(r);
         ngx_http_finalize_request(r, NGX_HTTP_REQUEST_ENTITY_TOO_LARGE);
         return NGX_OK;
     }
@@ -993,6 +994,7 @@ ngx_http_core_post_rewrite_phase(ngx_http_request_t *r,
                       "rewrite or internal redirection cycle "
                       "while processing \"%V\"", &r->uri);
 
+        r->main->count++;
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return NGX_OK;
     }
@@ -2171,6 +2173,7 @@ ngx_http_internal_redirect(ngx_http_request_t *r,
                       "rewrite or internal redirection cycle "
                       "while internal redirect to \"%V\"", uri);
 
+        r->main->count++;
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return NGX_DONE;
     }
@@ -3547,6 +3550,12 @@ ngx_http_core_server_name(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         {
         ngx_str_t  err;
         u_char     errstr[NGX_MAX_CONF_ERRSTR];
+
+        if (value[i].len == 1) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "empty regex in server name \"%V\"", &value[i]);
+            return NGX_CONF_ERROR;
+        }
 
         err.len = NGX_MAX_CONF_ERRSTR;
         err.data = errstr;

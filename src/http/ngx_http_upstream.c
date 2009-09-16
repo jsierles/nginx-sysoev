@@ -363,6 +363,7 @@ ngx_http_upstream_create(ngx_http_request_t *r)
     u = r->upstream;
 
     if (u && u->cleanup) {
+        r->main->count++;
         ngx_http_upstream_cleanup(r);
         *u->cleanup = NULL;
     }
@@ -1814,6 +1815,7 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
         r->valid_unparsed_uri = 0;
 
         ngx_http_internal_redirect(r, uri, &args);
+        ngx_http_finalize_request(r, NGX_DONE);
         return NGX_DONE;
     }
 
@@ -2112,6 +2114,10 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http cacheable: %d", u->cacheable);
+
+    if (u->cacheable == 0 && r->cache) {
+        ngx_http_file_cache_free(r, u->pipe->temp_file);
+    }
 
 #endif
 
