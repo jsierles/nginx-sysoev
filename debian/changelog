@@ -1,3 +1,12 @@
+nginx (0.8.15-1) unstable; urgency=low
+
+  [ Igor Sysoev ]
+  * nginx 0.8.13
+  * nginx 0.8.14
+  * nginx 0.8.15
+
+ -- Kirill A. Korinskiy <catap@catap.ru>  Wed, 16 Sep 2009 17:37:38 +0400
+
 nginx (0.8.12-1) unstable; urgency=low
 
   [ Igor Sysoev ]
