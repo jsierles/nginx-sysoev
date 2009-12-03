@@ -1,11 +1,184 @@
 
+Changes with nginx 0.8.29                                        30 Nov 2009
+
+    *) Change: now the "009" status code is written to an access log for 
+       proxied HTTP/0.9 responses.
+
+    *) Feature: the "addition_types", "charset_types", "gzip_types", 
+       "ssi_types", "sub_filter_types", and "xslt_types" directives support 
+       an "*" parameter.
+
+    *) Feature: GCC 4.1+ built-in atomic operations usage.
+       Thanks to W-Mark Kubacki.
+
+    *) Feature: the --with-libatomic[=DIR] option in the configure.
+       Thanks to W-Mark Kubacki.
+
+    *) Bugfix: listen unix domain socket had limited access rights.
+
+    *) Bugfix: cached HTTP/0.9 responses were handled incorrectly.
+
+    *) Bugfix: regular expression named captures given by "?P<...>" did not 
+       work in a "server_name" directive.
+       Thanks to Maxim Dounin.
+
+
+Changes with nginx 0.8.28                                        23 Nov 2009
+
+    *) Bugfix: nginx could not be built with the --without-pcre parameter; 
+       the bug had appeared in 0.8.25.
+
+
+Changes with nginx 0.8.27                                        17 Nov 2009
+
+    *) Bugfix: regular expressions did not work in nginx/Windows; the bug 
+       had appeared in 0.8.25.
+
+
+Changes with nginx 0.8.26                                        16 Nov 2009
+
+    *) Bugfix: in captures usage in "rewrite" directive; the bug had 
+       appeared in 0.8.25.
+
+    *) Bugfix: nginx could not be built without the --with-debug option; 
+       the bug had appeared in 0.8.25.
+
+
+Changes with nginx 0.8.25                                        16 Nov 2009
+
+    *) Change: now no message is written in an error log if a variable is 
+       not found by $r->variable() method.
+
+    *) Feature: the ngx_http_degradation_module.
+
+    *) Feature: regular expression named captures.
+
+    *) Feature: now URI part is not required a "proxy_pass" directive if 
+       variables are used.
+
+    *) Feature: now the "msie_padding" directive works for Chrome too.
+
+    *) Bugfix: a segmentation fault occurred in a worker process on low 
+       memory condition; the bug had appeared in 0.8.18.
+
+    *) Bugfix: nginx sent gzipped responses to clients those do not support 
+       gzip, if "gzip_static on" and "gzip_vary off"; the bug had appeared 
+       in 0.8.16.
+
+
+Changes with nginx 0.8.24                                        11 Nov 2009
+
+    *) Bugfix: nginx always added "Content-Encoding: gzip" response header 
+       line in 304 responses sent by ngx_http_gzip_static_module.
+
+    *) Bugfix: nginx could not be built without the --with-debug option; 
+       the bug had appeared in 0.8.23.
+
+    *) Bugfix: the "unix:" parameter of the "set_real_ip_from" directive 
+       inherited incorrectly from previous level.
+
+    *) Bugfix: in resolving empty name.
+
+
+Changes with nginx 0.8.23                                        11 Nov 2009
+
+    *) Security: now SSL/TLS renegotiation is disabled.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: listen unix domain socket did not inherit while online 
+       upgrade.
+
+    *) Bugfix: the "unix:" parameter of the "set_real_ip_from" directive 
+       did not without yet another directive with any IP address.
+
+    *) Bugfix: segmentation fault and infinite looping in resolver.
+
+    *) Bugfix: in resolver.
+       Thanks to Artem Bokhan.
+
+
+Changes with nginx 0.8.22                                        03 Nov 2009
+
+    *) Feature: the "proxy_bind", "fastcgi_bind", and "memcached_bind" 
+       directives.
+
+    *) Feature: the "access" and the "deny" directives support IPv6.
+
+    *) Feature: the "set_real_ip_from" directive supports IPv6 addresses in 
+       request headers.
+
+    *) Feature: the "unix:" parameter of the "set_real_ip_from" directive.
+
+    *) Bugfix: nginx did not delete unix domain socket after configuration 
+       testing.
+
+    *) Bugfix: nginx deleted unix domain socket while online upgrade.
+
+    *) Bugfix: the "!-x" operator did not work.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: a segmentation fault might occur in a worker process, if 
+       limit_rate was used in HTTPS server.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: a segmentation fault might occur in a worker process while 
+       $limit_rate logging.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: a segmentation fault might occur in a worker process, if 
+       there was no "listen" directive in "server" block; the bug had 
+       appeared in 0.8.21.
+
+
+Changes with nginx 0.8.21                                        26 Oct 2009
+
+    *) Feature: now the "-V" switch shows TLS SNI support.
+
+    *) Feature: the "listen" directive of the HTTP module supports unix 
+       domain sockets.
+       Thanks to Hongli Lai.
+
+    *) Feature: the "default_server" parameter of the "listen" directive.
+
+    *) Feature: now a "default" parameter is not required to set listen 
+       socket options.
+
+    *) Bugfix: nginx did not support dates in 2038 year on 32-bit platforms;
+
+    *) Bugfix: socket leak; the bug had appeared in 0.8.11.
+
+
+Changes with nginx 0.8.20                                        14 Oct 2009
+
+    *) Change: now default SSL ciphers are "HIGH:!ADH:!MD5".
+
+    *) Bugfix: the ngx_http_autoindex_module did not show the trailing 
+       slash in links to a directory; the bug had appeared in 0.7.15.
+
+    *) Bugfix: nginx did not close a log file set by the --error-log-path 
+       configuration option; the bug had appeared in 0.7.53.
+
+    *) Bugfix: nginx did not treat a comma as separator in the 
+       "Cache-Control" backend response header line.
+
+    *) Bugfix: nginx/Windows might not create temporary file, a cache file, 
+       or "proxy/fastcgi_store"d file if a worker had no enough access 
+       rights for top level directories.
+
+    *) Bugfix: the "Set-Cookie" and "P3P" FastCGI response header lines 
+       were not hidden while caching if no "fastcgi_hide_header" directives 
+       were used with any parameters.
+
+    *) Bugfix: nginx counted incorrectly disk cache size.
+
+
 Changes with nginx 0.8.19                                        06 Oct 2009
 
     *) Change: now SSLv2 protocol is disabled by default.
 
     *) Change: now default SSL ciphers are "ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM".
 
-    *) Bugfix: a "limit_req" directive did not work; the bug had appeared
+    *) Bugfix: a "limit_req" directive did not work; the bug had appeared 
        in 0.8.18.
 
 
@@ -15,21 +188,21 @@ Changes with nginx 0.8.18                                        06 Oct 2009
 
     *) Feature: now several "perl_modules" directives may be used.
 
-    *) Feature: the "limit_req_log_level" and "limit_conn_log_level"
+    *) Feature: the "limit_req_log_level" and "limit_conn_log_level" 
        directives.
 
-    *) Bugfix: now "limit_req" directive conforms to the leaky bucket
+    *) Bugfix: now "limit_req" directive conforms to the leaky bucket 
        algorithm.
        Thanks to Maxim Dounin.
 
     *) Bugfix: nginx did not work on Linux/sparc.
        Thanks to Marcus Ramberg.
 
-    *) Bugfix: nginx sent '\0' in a "Location" response header line on
+    *) Bugfix: nginx sent '\0' in a "Location" response header line on 
        MKCOL request.
        Thanks to Xie Zhenye.
 
-    *) Bugfix: zero status code was logged instead of 499 status code; the
+    *) Bugfix: zero status code was logged instead of 499 status code; the 
        bug had appeared in 0.8.11.
 
     *) Bugfix: socket leak; the bug had appeared in 0.8.11.
@@ -37,7 +210,7 @@ Changes with nginx 0.8.18                                        06 Oct 2009
 
 Changes with nginx 0.8.17                                        28 Sep 2009
 
-    *) Security: now "/../" are disabled in "Destination" request header
+    *) Security: now "/../" are disabled in "Destination" request header 
        line.
 
     *) Change: now $host variable value is always low case.
@@ -51,7 +224,7 @@ Changes with nginx 0.8.16                                        22 Sep 2009
 
     *) Feature: the "image_filter_transparency" directive.
 
-    *) Bugfix: "addition_types" directive was incorrectly named
+    *) Bugfix: "addition_types" directive was incorrectly named 
        "addtion_types".
 
     *) Bugfix: resolver cache poisoning.
@@ -60,31 +233,31 @@ Changes with nginx 0.8.16                                        22 Sep 2009
     *) Bugfix: memory leak in resolver.
        Thanks to Matthew Dempsky.
 
-    *) Bugfix: invalid request line in $request variable was written in
+    *) Bugfix: invalid request line in $request variable was written in 
        access_log only if error_log was set to "info" or "debug" level.
 
-    *) Bugfix: in PNG alpha-channel support in the
+    *) Bugfix: in PNG alpha-channel support in the 
        ngx_http_image_filter_module.
 
-    *) Bugfix: nginx always added "Vary: Accept-Encoding" response header
+    *) Bugfix: nginx always added "Vary: Accept-Encoding" response header 
        line, if both "gzip_static" and "gzip_vary" were on.
 
-    *) Bugfix: in UTF-8 encoding support by "try_files" directive in
+    *) Bugfix: in UTF-8 encoding support by "try_files" directive in 
        nginx/Windows.
 
-    *) Bugfix: in "post_action" directive usage; the bug had appeared in
+    *) Bugfix: in "post_action" directive usage; the bug had appeared in 
        0.8.11.
        Thanks to Igor Artemiev.
 
 
 Changes with nginx 0.8.15                                        14 Sep 2009
 
-    *) Security: a segmentation fault might occur in worker process while
+    *) Security: a segmentation fault might occur in worker process while 
        specially crafted request handling.
        Thanks to Chris Ries.
 
-    *) Bugfix: if names .domain.tld, .sub.domain.tld, and .domain-some.tld
-       were defined, then the name .sub.domain.tld was matched by
+    *) Bugfix: if names .domain.tld, .sub.domain.tld, and .domain-some.tld 
+       were defined, then the name .sub.domain.tld was matched by 
        .domain.tld.
 
     *) Bugfix: in transparency support in the ngx_http_image_filter_module.
@@ -98,25 +271,25 @@ Changes with nginx 0.8.15                                        14 Sep 2009
 
 Changes with nginx 0.8.14                                        07 Sep 2009
 
-    *) Bugfix: an expired cached response might stick in the "UPDATING"
+    *) Bugfix: an expired cached response might stick in the "UPDATING" 
        state.
 
-    *) Bugfix: a segmentation fault might occur in worker process, if
+    *) Bugfix: a segmentation fault might occur in worker process, if 
        error_log was set to info or debug level.
        Thanks to Sergey Bochenkov.
 
     *) Bugfix: in embedded perl module; the bug had appeared in 0.8.11.
 
-    *) Bugfix: an "error_page" directive did not redirect a 413 error; the
+    *) Bugfix: an "error_page" directive did not redirect a 413 error; the 
        bug had appeared in 0.6.10.
 
 
 Changes with nginx 0.8.13                                        31 Aug 2009
 
-    *) Bugfix: in the "aio sendfile" directive; the bug had appeared in
+    *) Bugfix: in the "aio sendfile" directive; the bug had appeared in 
        0.8.12.
 
-    *) Bugfix: nginx could not be built without the --with-file-aio option
+    *) Bugfix: nginx could not be built without the --with-file-aio option 
        on FreeBSD; the bug had appeared in 0.8.12.
 
 
@@ -131,7 +304,7 @@ Changes with nginx 0.8.12                                        31 Aug 2009
 
 Changes with nginx 0.8.11                                        28 Aug 2009
 
-    *) Change: now directive "gzip_disable msie6" does not disable gzipping
+    *) Change: now directive "gzip_disable msie6" does not disable gzipping 
        for MSIE 6.0 SV1.
 
     *) Feature: file AIO support on FreeBSD and Linux.
@@ -143,16 +316,16 @@ Changes with nginx 0.8.10                                        24 Aug 2009
 
     *) Bugfix: memory leaks if GeoIP City database was used.
 
-    *) Bugfix: in copying temporary files to permanent storage area; the
+    *) Bugfix: in copying temporary files to permanent storage area; the 
        bug had appeared in 0.8.9.
 
 
 Changes with nginx 0.8.9                                         17 Aug 2009
 
-    *) Feature: now the start cache loader runs in a separate process; this
+    *) Feature: now the start cache loader runs in a separate process; this 
        should improve large caches handling.
 
-    *) Feature: now temporary files and permanent storage area may reside
+    *) Feature: now temporary files and permanent storage area may reside 
        at different file systems.
 
 
@@ -160,9 +333,9 @@ Changes with nginx 0.8.8                                         10 Aug 2009
 
     *) Bugfix: in handling FastCGI headers split in records.
 
-    *) Bugfix: a segmentation fault occurred in worker process, if a
-       request was handled in two proxied or FastCGIed locations and a
-       caching was enabled in the first location; the bug had appeared in
+    *) Bugfix: a segmentation fault occurred in worker process, if a 
+       request was handled in two proxied or FastCGIed locations and a 
+       caching was enabled in the first location; the bug had appeared in 
        0.8.7.
 
 
@@ -170,8 +343,8 @@ Changes with nginx 0.8.7                                         27 Jul 2009
 
     *) Change: minimum supported OpenSSL version is 0.9.7.
 
-    *) Change: the "ask" parameter of the "ssl_verify_client" directive was
-       changed to the "optional" parameter and now it checks a client
+    *) Change: the "ask" parameter of the "ssl_verify_client" directive was 
+       changed to the "optional" parameter and now it checks a client 
        certificate if it was offered.
        Thanks to Brice Figureau.
 
@@ -183,24 +356,24 @@ Changes with nginx 0.8.7                                         27 Jul 2009
 
     *) Feature: the "proxy" parameter of the "geo" directive.
 
-    *) Feature: the "image_filter" directive supports variables for setting
+    *) Feature: the "image_filter" directive supports variables for setting 
        size.
 
-    *) Bugfix: the $ssl_client_cert variable usage corrupted memory; the
+    *) Bugfix: the $ssl_client_cert variable usage corrupted memory; the 
        bug had appeared in 0.7.7.
        Thanks to Sergey Zhuravlev.
 
-    *) Bugfix: "proxy_pass_header" and "fastcgi_pass_header" directives did
-       not pass to a client the "X-Accel-Redirect", "X-Accel-Limit-Rate",
-       "X-Accel-Buffering", and "X-Accel-Charset" lines from backend
+    *) Bugfix: "proxy_pass_header" and "fastcgi_pass_header" directives did 
+       not pass to a client the "X-Accel-Redirect", "X-Accel-Limit-Rate", 
+       "X-Accel-Buffering", and "X-Accel-Charset" lines from backend 
        response header.
        Thanks to Maxim Dounin.
 
-    *) Bugfix: in handling "Last-Modified" and "Accept-Ranges" backend
+    *) Bugfix: in handling "Last-Modified" and "Accept-Ranges" backend 
        response header lines; the bug had appeared in 0.7.44.
        Thanks to Maxim Dounin.
 
-    *) Bugfix: the "[alert] zero size buf" error if subrequest returns an
+    *) Bugfix: the "[alert] zero size buf" error if subrequest returns an 
        empty response; the bug had appeared in 0.8.5.
 
 
@@ -208,17 +381,17 @@ Changes with nginx 0.8.6                                         20 Jul 2009
 
     *) Feature: the ngx_http_geoip_module.
 
-    *) Bugfix: XSLT filter may fail with message "not well formed XML
+    *) Bugfix: XSLT filter may fail with message "not well formed XML 
        document" for valid XML document.
        Thanks to Kuramoto Eiji.
 
-    *) Bugfix: now in MacOSX, Cygwin, and nginx/Windows locations given by
+    *) Bugfix: now in MacOSX, Cygwin, and nginx/Windows locations given by 
        a regular expression are always tested in case insensitive mode.
 
     *) Bugfix: now nginx/Windows ignores trailing dots in URI.
        Thanks to Hugo Leisink.
 
-    *) Bugfix: name of file specified in --conf-path was not honored during
+    *) Bugfix: name of file specified in --conf-path was not honored during 
        installation; the bug had appeared in 0.6.6.
        Thanks to Maxim Dounin.
 
@@ -227,7 +400,7 @@ Changes with nginx 0.8.5                                         13 Jul 2009
 
     *) Bugfix: now nginx allows underscores in a request method.
 
-    *) Bugfix: a 500 error code was returned for invalid login/password
+    *) Bugfix: a 500 error code was returned for invalid login/password 
        while HTTP Basic authentication on Windows.
 
     *) Bugfix: ngx_http_perl_module responses did not work in subrequests.
@@ -238,7 +411,7 @@ Changes with nginx 0.8.5                                         13 Jul 2009
 
 Changes with nginx 0.8.4                                         22 Jun 2009
 
-    *) Bugfix: nginx could not be built --without-http-cache; the bug had
+    *) Bugfix: nginx could not be built --without-http-cache; the bug had 
        appeared in 0.8.3.
 
 
@@ -248,42 +421,42 @@ Changes with nginx 0.8.3                                         19 Jun 2009
 
     *) Bugfix: nginx could not be built on MacOSX 10.6.
 
-    *) Bugfix: nginx could not be built --without-http-cache; the bug had
+    *) Bugfix: nginx could not be built --without-http-cache; the bug had 
        appeared in 0.8.2.
 
-    *) Bugfix: a segmentation fault occurred in worker process, if a
-       backend 401 error was intercepted and the backend did not set the
+    *) Bugfix: a segmentation fault occurred in worker process, if a 
+       backend 401 error was intercepted and the backend did not set the 
        "WWW-Authenticate" response header line.
        Thanks to Eugene Mychlo.
 
 
 Changes with nginx 0.8.2                                         15 Jun 2009
 
-    *) Bugfix: in open_file_cache and proxy/fastcgi cache interaction on
+    *) Bugfix: in open_file_cache and proxy/fastcgi cache interaction on 
        start up.
 
-    *) Bugfix: open_file_cache might cache open file descriptors too long;
+    *) Bugfix: open_file_cache might cache open file descriptors too long; 
        the bug had appeared in 0.7.4.
 
 
 Changes with nginx 0.8.1                                         08 Jun 2009
 
-    *) Feature: the "updating" parameter in "proxy_cache_use_stale" and
+    *) Feature: the "updating" parameter in "proxy_cache_use_stale" and 
        "fastcgi_cache_use_stale" directives.
 
-    *) Bugfix: the "If-Modified-Since", "If-Range", etc. client request
-       header lines were passed to backend while caching if no
+    *) Bugfix: the "If-Modified-Since", "If-Range", etc. client request 
+       header lines were passed to backend while caching if no 
        "proxy_set_header" directive was used with any parameters.
 
-    *) Bugfix: the "Set-Cookie" and "P3P" response header lines were not
-       hidden while caching if no "proxy_hide_header/fastcgi_hide_header"
+    *) Bugfix: the "Set-Cookie" and "P3P" response header lines were not 
+       hidden while caching if no "proxy_hide_header/fastcgi_hide_header" 
        directives were used with any parameters.
 
-    *) Bugfix: the ngx_http_image_filter_module did not support GIF87a
+    *) Bugfix: the ngx_http_image_filter_module did not support GIF87a 
        format.
        Thanks to Denis Ilyinyh.
 
-    *) Bugfix: nginx could not be built modules on Solaris 10 and early;
+    *) Bugfix: nginx could not be built modules on Solaris 10 and early; 
        the bug had appeared in 0.7.56.
 
 
@@ -298,7 +471,7 @@ Changes with nginx 0.8.0                                         02 Jun 2009
 
     *) Bugfix: in relative paths handling in nginx/Windows.
 
-    *) Bugfix: in proxy_store, fastcgi_store, proxy_cache, and
+    *) Bugfix: in proxy_store, fastcgi_store, proxy_cache, and 
        fastcgi_cache in nginx/Windows.
 
     *) Bugfix: in memory allocation error handling.
@@ -307,23 +480,23 @@ Changes with nginx 0.8.0                                         02 Jun 2009
 
 Changes with nginx 0.7.59                                        25 May 2009
 
-    *) Feature: the "proxy_cache_methods" and "fastcgi_cache_methods"
+    *) Feature: the "proxy_cache_methods" and "fastcgi_cache_methods" 
        directives.
 
     *) Bugfix: socket leak; the bug had appeared in 0.7.25.
        Thanks to Maxim Dounin.
 
-    *) Bugfix: a segmentation fault occurred in worker process,
+    *) Bugfix: a segmentation fault occurred in worker process, 
        if a request had no body and the $request_body variable was used;
        the bug had appeared in 0.7.58.
 
     *) Bugfix: the SSL modules might not built on Solaris and Linux;
        the bug had appeared in 0.7.56.
 
-    *) Bugfix: ngx_http_xslt_filter_module responses were not handled by
+    *) Bugfix: ngx_http_xslt_filter_module responses were not handled by 
        SSI, charset, and gzip filters.
 
-    *) Bugfix: a "charset" directive did not set a charset to
+    *) Bugfix: a "charset" directive did not set a charset to 
        ngx_http_gzip_static_module responses.
 
 
@@ -337,24 +510,24 @@ Changes with nginx 0.7.58                                        18 May 2009
 
     *) Feature: the $request_body variable.
 
-    *) Bugfix: in ngx_http_autoindex_module in file name links having a ":"
+    *) Bugfix: in ngx_http_autoindex_module in file name links having a ":" 
        symbol in the name.
 
-    *) Bugfix: "make upgrade" procedure did not work; the bug had appeared
+    *) Bugfix: "make upgrade" procedure did not work; the bug had appeared 
        in 0.7.53.
        Thanks to Denis F. Latypoff.
 
 
 Changes with nginx 0.7.57                                        12 May 2009
 
-    *) Bugfix: a floating-point fault occurred in worker process, if the
-       ngx_http_image_filter_module errors were redirected to named
+    *) Bugfix: a floating-point fault occurred in worker process, if the 
+       ngx_http_image_filter_module errors were redirected to named 
        location; the bug had appeared in 0.7.56.
 
 
 Changes with nginx 0.7.56                                        11 May 2009
 
-    *) Feature: nginx/Windows supports IPv6 in a "listen" directive of the
+    *) Feature: nginx/Windows supports IPv6 in a "listen" directive of the 
        HTTP module.
 
     *) Bugfix: in ngx_http_image_filter_module.
@@ -362,21 +535,21 @@ Changes with nginx 0.7.56                                        11 May 2009
 
 Changes with nginx 0.7.55                                        06 May 2009
 
-    *) Bugfix: the http_XXX parameters in "proxy_cache_use_stale" and
+    *) Bugfix: the http_XXX parameters in "proxy_cache_use_stale" and 
        "fastcgi_cache_use_stale" directives did not work.
 
     *) Bugfix: fastcgi cache did not cache header only responses.
 
-    *) Bugfix: of "select() failed (9: Bad file descriptor)" error in
+    *) Bugfix: of "select() failed (9: Bad file descriptor)" error in 
        nginx/Unix and "select() failed (10038: ...)" error in nginx/Windows.
 
-    *) Bugfix: a segmentation fault might occur in worker process, if an
-       "debug_connection" directive was used; the bug had appeared in
+    *) Bugfix: a segmentation fault might occur in worker process, if an 
+       "debug_connection" directive was used; the bug had appeared in 
        0.7.54.
 
     *) Bugfix: fix ngx_http_image_filter_module building errors.
 
-    *) Bugfix: the files bigger than 2G could not be transferred using
+    *) Bugfix: the files bigger than 2G could not be transferred using 
        $r->sendfile.
        Thanks to Maxim Dounin.
 
@@ -385,33 +558,33 @@ Changes with nginx 0.7.54                                        01 May 2009
 
     *) Feature: the ngx_http_image_filter_module.
 
-    *) Feature: the "proxy_ignore_headers" and "fastcgi_ignore_headers"
+    *) Feature: the "proxy_ignore_headers" and "fastcgi_ignore_headers" 
        directives.
 
-    *) Bugfix: a segmentation fault might occur in worker process, if an
-       "open_file_cache_errors off" directive was used; the bug had
+    *) Bugfix: a segmentation fault might occur in worker process, if an 
+       "open_file_cache_errors off" directive was used; the bug had 
        appeared in 0.7.53.
 
-    *) Bugfix: the "port_in_redirect off" directive did not work; the bug
+    *) Bugfix: the "port_in_redirect off" directive did not work; the bug 
        had appeared in 0.7.39.
 
     *) Bugfix: improve handling of "select" method errors.
 
     *) Bugfix: of "select() failed (10022: ...)" error in nginx/Windows.
 
-    *) Bugfix: in error text descriptions in nginx/Windows; the bug had
+    *) Bugfix: in error text descriptions in nginx/Windows; the bug had 
        appeared in 0.7.53.
 
 
 Changes with nginx 0.7.53                                        27 Apr 2009
 
-    *) Change: now a log set by --error-log-path is created from the very
+    *) Change: now a log set by --error-log-path is created from the very 
        start-up.
 
-    *) Feature: now the start up errors and warnings are outputted to an
+    *) Feature: now the start up errors and warnings are outputted to an 
        error_log and stderr.
 
-    *) Feature: the empty --prefix= configure parameter forces nginx to use
+    *) Feature: the empty --prefix= configure parameter forces nginx to use 
        a directory where it was run as prefix.
 
     *) Feature: the -p switch.
@@ -423,14 +596,14 @@ Changes with nginx 0.7.53                                        27 Apr 2009
 
     *) Feature: now switches may be set in condensed form.
 
-    *) Bugfix: nginx/Windows did not work if configuration file was given
+    *) Bugfix: nginx/Windows did not work if configuration file was given 
        by the -c switch.
 
-    *) Bugfix: temporary files might be not removed if the "proxy_store",
+    *) Bugfix: temporary files might be not removed if the "proxy_store", 
        "fastcgi_store", "proxy_cache", or "fastcgi_cache" were used.
        Thanks to Maxim Dounin.
 
-    *) Bugfix: an incorrect value was passed to mail proxy authentication
+    *) Bugfix: an incorrect value was passed to mail proxy authentication 
        server in "Auth-Method" header line; the bug had appeared
        in 0.7.34.
        Thanks to Simon Lecaille.
@@ -448,46 +621,46 @@ Changes with nginx 0.7.52                                        20 Apr 2009
 
     *) Bugfix: in processing HEAD method while caching.
 
-    *) Bugfix: in processing the "If-Modified-Since", "If-Range", etc.
+    *) Bugfix: in processing the "If-Modified-Since", "If-Range", etc. 
        client request header lines while caching.
 
-    *) Bugfix: now the "Set-Cookie" and "P3P" header lines are hidden in
+    *) Bugfix: now the "Set-Cookie" and "P3P" header lines are hidden in 
        cacheable responses.
 
-    *) Bugfix: if nginx was built with the ngx_http_perl_module and with a
-       perl which supports threads, then during a master process exit the
+    *) Bugfix: if nginx was built with the ngx_http_perl_module and with a 
+       perl which supports threads, then during a master process exit the 
        message "panic: MUTEX_LOCK" might be issued.
 
-    *) Bugfix: nginx could not be built --without-http-cache; the bug had
+    *) Bugfix: nginx could not be built --without-http-cache; the bug had 
        appeared in 0.7.48.
 
-    *) Bugfix: nginx could not be built on platforms different from i386,
+    *) Bugfix: nginx could not be built on platforms different from i386, 
        amd64, sparc, and ppc; the bug had appeared in 0.7.42.
 
 
 Changes with nginx 0.7.51                                        12 Apr 2009
 
-    *) Feature: the "try_files" directive supports a response code in the
+    *) Feature: the "try_files" directive supports a response code in the 
        fallback parameter.
 
     *) Feature: now any response code can be used in the "return" directive.
 
-    *) Bugfix: the "error_page" directive made an external redirect without
+    *) Bugfix: the "error_page" directive made an external redirect without 
        query string; the bug had appeared in 0.7.44.
 
-    *) Bugfix: if servers listened on several defined explicitly addresses,
+    *) Bugfix: if servers listened on several defined explicitly addresses, 
        then virtual servers might not work; the bug had appeared in 0.7.39.
 
 
 Changes with nginx 0.7.50                                        06 Apr 2009
 
-    *) Bugfix: the $arg_... variables did not work; the bug had appeared in
+    *) Bugfix: the $arg_... variables did not work; the bug had appeared in 
        0.7.49.
 
 
 Changes with nginx 0.7.49                                        06 Apr 2009
 
-    *) Bugfix: a segmentation fault might occur in worker process, if the
+    *) Bugfix: a segmentation fault might occur in worker process, if the 
        $arg_... variables were used; the bug had appeared in 0.7.48.
 
 
@@ -495,7 +668,7 @@ Changes with nginx 0.7.48                                        06 Apr 2009
 
     *) Feature: the "proxy_cache_key" directive.
 
-    *) Bugfix: now nginx takes into account the "X-Accel-Expires",
+    *) Bugfix: now nginx takes into account the "X-Accel-Expires", 
        "Expires", and "Cache-Control" header lines in a backend response.
 
     *) Bugfix: now nginx caches responses for the GET requests only.
@@ -508,28 +681,28 @@ Changes with nginx 0.7.48                                        06 Apr 2009
     *) Bugfix: nginx could not be built with uclibc library.
        Thanks to Timothy Redaelli.
 
-    *) Bugfix: nginx could not be built on OpenBSD; the bug had
+    *) Bugfix: nginx could not be built on OpenBSD; the bug had 
        appeared in 0.7.46.
 
 
 Changes with nginx 0.7.47                                        01 Apr 2009
 
-    *) Bugfix: nginx could not be built on FreeBSD 6 and early versions;
+    *) Bugfix: nginx could not be built on FreeBSD 6 and early versions; 
        the bug had appeared in 0.7.46.
 
-    *) Bugfix: nginx could not be built on MacOSX; the bug had
+    *) Bugfix: nginx could not be built on MacOSX; the bug had 
        appeared in 0.7.46.
 
-    *) Bugfix: if the "max_size" parameter was set, then the cache manager
+    *) Bugfix: if the "max_size" parameter was set, then the cache manager 
        might purge a whole cache; the bug had appeared in 0.7.46.
 
-    *) Change: a segmentation fault might occur in worker process, if the
-       "proxy_cache"/"fastcgi_cache" and the "proxy_cache_valid"/
-       "fastcgi_cache_valid" were set on different levels; the bug had
+    *) Change: a segmentation fault might occur in worker process, if the 
+       "proxy_cache"/"fastcgi_cache" and the "proxy_cache_valid"/ 
+       "fastcgi_cache_valid" were set on different levels; the bug had 
        appeared in 0.7.46.
 
-    *) Bugfix: a segmentation fault might occur in worker process, if a
-       request was redirected to a proxied or FastCGI server via error_page
+    *) Bugfix: a segmentation fault might occur in worker process, if a 
+       request was redirected to a proxied or FastCGI server via error_page 
        or try_files; the bug had appeared in 0.7.44.
 
 
@@ -540,30 +713,30 @@ Changes with nginx 0.7.46                                        30 Mar 2009
 
 Changes with nginx 0.7.45                                        30 Mar 2009
 
-    *) Change: now the "proxy_cache" and the "proxy_cache_valid" directives
+    *) Change: now the "proxy_cache" and the "proxy_cache_valid" directives 
        can be set on different levels.
 
-    *) Change: the "clean_time" parameter of the "proxy_cache_path"
+    *) Change: the "clean_time" parameter of the "proxy_cache_path" 
        directive is canceled.
 
-    *) Feature: the "max_size" parameter of the "proxy_cache_path"
+    *) Feature: the "max_size" parameter of the "proxy_cache_path" 
        directive.
 
     *) Feature: the ngx_http_fastcgi_module preliminary cache support.
 
-    *) Feature: now on shared memory allocation errors directive and zone
+    *) Feature: now on shared memory allocation errors directive and zone 
        names are logged.
 
-    *) Bugfix: the directive "add_header last-modified ''" did not delete a
+    *) Bugfix: the directive "add_header last-modified ''" did not delete a 
        "Last-Modified" response header line; the bug had appeared in 0.7.44.
 
-    *) Bugfix: a relative path in the "auth_basic_user_file" directive
-       given without variables did not work; the bug had appeared in
+    *) Bugfix: a relative path in the "auth_basic_user_file" directive 
+       given without variables did not work; the bug had appeared in 
        0.7.44.
        Thanks to Jerome Loyet.
 
-    *) Bugfix: in an "alias" directive given using variables without
-       references to captures of regular expressions; the bug had appeared
+    *) Bugfix: in an "alias" directive given using variables without 
+       references to captures of regular expressions; the bug had appeared 
        in 0.7.42.
 
 
@@ -573,51 +746,51 @@ Changes with nginx 0.7.44                                        23 Mar 2009
 
     *) Feature: the --with-pcre option in the configure.
 
-    *) Feature: the "try_files" directive is now allowed on the server
+    *) Feature: the "try_files" directive is now allowed on the server 
        block level.
 
-    *) Bugfix: the "try_files" directive handled incorrectly a query string
+    *) Bugfix: the "try_files" directive handled incorrectly a query string 
        in a fallback parameter.
 
     *) Bugfix: the "try_files" directive might test incorrectly directories.
 
-    *) Bugfix: if there is the single server for given address:port pair,
-       then captures in regular expressions in a "server_name" directive
+    *) Bugfix: if there is the single server for given address:port pair, 
+       then captures in regular expressions in a "server_name" directive 
        did not work.
 
 
 Changes with nginx 0.7.43                                        18 Mar 2009
 
-    *) Bugfix: a request was handled incorrectly, if a "root" directive
+    *) Bugfix: a request was handled incorrectly, if a "root" directive 
        used variables; the bug had appeared in 0.7.42.
 
-    *) Bugfix: if a server listened on wildcard address, then the
-       $server_addr variable value was "0.0.0.0"; the bug had appeared in
+    *) Bugfix: if a server listened on wildcard address, then the 
+       $server_addr variable value was "0.0.0.0"; the bug had appeared in 
        0.7.36.
 
 
 Changes with nginx 0.7.42                                        16 Mar 2009
 
-    *) Change: now the "Invalid argument" error returned by
+    *) Change: now the "Invalid argument" error returned by 
        setsockopt(TCP_NODELAY) on Solaris, is ignored.
 
-    *) Change: now if a file specified in a "auth_basic_user_file"
-       directive is absent, then the 403 error is returned instead of the
+    *) Change: now if a file specified in a "auth_basic_user_file" 
+       directive is absent, then the 403 error is returned instead of the 
        500 one.
 
     *) Feature: the "auth_basic_user_file" directive supports variables.
        Thanks to Kirill A. Korinskiy.
 
-    *) Feature: the "listen" directive supports the "ipv6only" parameter.
+    *) Feature: the "listen" directive supports the "ipv6only" parameter. 
        Thanks to Zhang Hua.
 
-    *) Bugfix: in an "alias" directive with references to captures of
+    *) Bugfix: in an "alias" directive with references to captures of 
        regular expressions; the bug had appeared in 0.7.40.
 
     *) Bugfix: compatibility with Tru64 UNIX.
        Thanks to Dustin Marquess.
 
-    *) Bugfix: nginx could not be built without PCRE library; the bug had
+    *) Bugfix: nginx could not be built without PCRE library; the bug had 
        appeared in 0.7.41.
 
 
@@ -693,7 +866,7 @@ Changes with nginx 0.7.35                                        16 Feb 2009
        original request extension.
 
     *) Bugfix: "*domain.tld" names were handled incorrectly in 
-       "server_name", "valid_referers", and "map" directives, if
+       "server_name", "valid_referers", and "map" directives, if 
        ".domain.tld" and ".subdomain.domain.tld" wildcards were used; 
        the bug had appeared in 0.7.9.
 
@@ -2085,7 +2258,7 @@ Changes with nginx 0.5.12                                        12 Feb 2007
        amd64, sparc, and ppc; the bug had appeared in 0.5.8.
 
     *) Bugfix: a segmentation fault might occur in worker process if the 
-       temporary files were used while working with FastCGI server; the bug
+       temporary files were used while working with FastCGI server; the bug 
        had appeared in 0.5.8.
 
     *) Bugfix: a segmentation fault might occur in worker process if the 
@@ -2989,7 +3162,7 @@ Changes with nginx 0.3.31                                        10 Mar 2006
        in 0.3.18.
 
     *) Bugfix: if the HTTPS protocol was used in the "proxy_pass" directive 
-       and the request body was in temporary file then the request was not
+       and the request body was in temporary file then the request was not 
        transferred.
 
     *) Bugfix: perl 5.8.8 compatibility.

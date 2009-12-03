@@ -92,7 +92,7 @@ static void *ngx_resolver_dup(ngx_resolver_t *r, void *src, size_t size);
 /* STUB: ngx_peer_addr_t * */
 
 ngx_resolver_t *
-ngx_resolver_create(ngx_conf_t *cf, ngx_peer_addr_t *addr)
+ngx_resolver_create(ngx_conf_t *cf, ngx_addr_t *addr)
 {
     ngx_resolver_t        *r;
     ngx_pool_cleanup_t    *cln;
@@ -464,6 +464,7 @@ ngx_resolve_name_locked(ngx_resolver_t *r, ngx_resolver_ctx_t *ctx)
 
             ctx->next = rn->waiting;
             rn->waiting = ctx;
+            ctx->state = NGX_AGAIN;
 
             return NGX_AGAIN;
         }
@@ -625,6 +626,7 @@ ngx_resolve_addr(ngx_resolver_ctx_t *ctx)
 
             ctx->next = rn->waiting;
             rn->waiting = ctx;
+            ctx->state = NGX_AGAIN;
 
             /* unlock addr mutex */
 
@@ -1717,15 +1719,16 @@ static ngx_int_t
 ngx_resolver_create_name_query(ngx_resolver_node_t *rn, ngx_resolver_ctx_t *ctx)
 {
     u_char                *p, *s;
-    size_t                 len;
+    size_t                 len, nlen;
     ngx_uint_t             ident;
     ngx_resolver_qs_t     *qs;
     ngx_resolver_query_t  *query;
 
-    len = sizeof(ngx_resolver_query_t)
-          + 1 + ctx->name.len + 1 + sizeof(ngx_resolver_qs_t);
+    nlen = ctx->name.len ? (1 + ctx->name.len + 1) : 1;
 
-    p = ngx_resolver_calloc(ctx->resolver, len);
+    len = sizeof(ngx_resolver_query_t) + nlen + sizeof(ngx_resolver_qs_t);
+
+    p = ngx_resolver_alloc(ctx->resolver, len);
     if (p == NULL) {
         return NGX_ERROR;
     }
@@ -1752,7 +1755,7 @@ ngx_resolver_create_name_query(ngx_resolver_node_t *rn, ngx_resolver_ctx_t *ctx)
     query->nns_hi = 0; query->nns_lo = 0;
     query->nar_hi = 0; query->nar_lo = 0;
 
-    p += sizeof(ngx_resolver_query_t) + 1 + ctx->name.len + 1;
+    p += sizeof(ngx_resolver_query_t) + nlen;
 
     qs = (ngx_resolver_qs_t *) p;
 
@@ -1806,7 +1809,7 @@ ngx_resolver_create_addr_query(ngx_resolver_node_t *rn, ngx_resolver_ctx_t *ctx)
           + sizeof(".255.255.255.255.in-addr.arpa.") - 1
           + sizeof(ngx_resolver_qs_t);
 
-    p = ngx_resolver_calloc(ctx->resolver, len);
+    p = ngx_resolver_alloc(ctx->resolver, len);
     if (p == NULL) {
         return NGX_ERROR;
     }
@@ -1897,6 +1900,12 @@ invalid:
 done:
 
     if (name == NULL) {
+        return NGX_OK;
+    }
+
+    if (len == -1) {
+        name->len = 0;
+        name->data = NULL;
         return NGX_OK;
     }
 

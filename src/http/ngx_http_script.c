@@ -251,8 +251,6 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
             {
             ngx_uint_t  n;
 
-            /* NGX_HTTP_MAX_CAPTURES is 9 */
-
             if (sc->source->data[i] >= '1' && sc->source->data[i] <= '9') {
 
                 n = sc->source->data[i] - '0';
@@ -828,20 +826,9 @@ ngx_http_script_regex_start_code(ngx_http_script_engine_t *e)
         e->line.data = e->sp->data;
     }
 
-    if (code->ncaptures && r->captures == NULL) {
+    rc = ngx_http_regex_exec(r, code->regex, &e->line);
 
-        r->captures = ngx_palloc(r->pool,
-                                 (NGX_HTTP_MAX_CAPTURES + 1) * 3 * sizeof(int));
-        if (r->captures == NULL) {
-            e->ip = ngx_http_script_exit;
-            e->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
-            return;
-        }
-    }
-
-    rc = ngx_regex_exec(code->regex, &e->line, r->captures, code->ncaptures);
-
-    if (rc == NGX_REGEX_NO_MATCHED) {
+    if (rc == NGX_DECLINED) {
         if (e->log || (r->connection->log->log_level & NGX_LOG_DEBUG_HTTP)) {
             ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
                           "\"%V\" does not match \"%V\"",
@@ -870,11 +857,7 @@ ngx_http_script_regex_start_code(ngx_http_script_engine_t *e)
         return;
     }
 
-    if (rc < 0) {
-        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
-                      ngx_regex_exec_n " failed: %d on \"%V\" using \"%V\"",
-                      rc, &e->line, &code->name);
-
+    if (rc == NGX_ERROR) {
         e->ip = ngx_http_script_exit;
         e->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
         return;
@@ -884,9 +867,6 @@ ngx_http_script_regex_start_code(ngx_http_script_engine_t *e)
         ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
                       "\"%V\" matches \"%V\"", &code->name, &e->line);
     }
-
-    r->ncaptures = code->ncaptures;
-    r->captures_data = e->line.data;
 
     if (code->test) {
         if (code->negative_test) {
@@ -930,14 +910,14 @@ ngx_http_script_regex_start_code(ngx_http_script_engine_t *e)
         e->buf.len = code->size;
 
         if (code->uri) {
-            if (rc && (r->quoted_uri || r->plus_in_uri)) {
+            if (r->ncaptures && (r->quoted_uri || r->plus_in_uri)) {
                 e->buf.len += 2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len,
                                                  NGX_ESCAPE_ARGS);
             }
         }
 
-        for (n = 1; n < (ngx_uint_t) rc; n++) {
-            e->buf.len += r->captures[2 * n + 1] - r->captures[2 * n];
+        for (n = 2; n < r->ncaptures; n += 2) {
+            e->buf.len += r->captures[n + 1] - r->captures[n];
         }
 
     } else {

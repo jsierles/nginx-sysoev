@@ -2450,27 +2450,28 @@ ngx_http_ssi_if(ngx_http_request_t *r, ngx_http_ssi_ctx_t *ctx,
 
     } else {
 #if (NGX_PCRE)
-        ngx_str_t     err;
-        ngx_regex_t  *regex;
-        u_char        errstr[NGX_MAX_CONF_ERRSTR];
-
-        err.len = NGX_MAX_CONF_ERRSTR;
-        err.data = errstr;
+        ngx_regex_compile_t  rgc;
+        u_char               errstr[NGX_MAX_CONF_ERRSTR];
 
         right.data[right.len] = '\0';
 
-        regex = ngx_regex_compile(&right, 0, r->pool, &err);
+        ngx_memzero(&rgc, sizeof(ngx_regex_compile_t));
 
-        if (regex == NULL) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "%s", err.data);
+        rgc.pattern = right;
+        rgc.pool = r->pool;
+        rgc.err.len = NGX_MAX_CONF_ERRSTR;
+        rgc.err.data = errstr;
+
+        if (ngx_regex_compile(&rgc) != NGX_OK) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "%V", &rgc.err);
             return NGX_HTTP_SSI_ERROR;
         }
 
-        rc = ngx_regex_exec(regex, &left, NULL, 0);
+        rc = ngx_regex_exec(rgc.regex, &left, NULL, 0);
 
-        if (rc != NGX_REGEX_NO_MATCHED && rc < 0) {
+        if (rc < NGX_REGEX_NO_MATCHED) {
             ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
-                          ngx_regex_exec_n " failed: %d on \"%V\" using \"%V\"",
+                          ngx_regex_exec_n " failed: %i on \"%V\" using \"%V\"",
                           rc, &left, &right);
             return NGX_HTTP_SSI_ERROR;
         }
@@ -2772,8 +2773,8 @@ ngx_http_ssi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->min_file_chunk, prev->min_file_chunk, 1024);
     ngx_conf_merge_size_value(conf->value_len, prev->value_len, 256);
 
-    if (ngx_http_merge_types(cf, conf->types_keys, &conf->types,
-                             prev->types_keys, &prev->types,
+    if (ngx_http_merge_types(cf, &conf->types_keys, &conf->types,
+                             &prev->types_keys, &prev->types,
                              ngx_http_html_default_types)
         != NGX_OK)
     {
