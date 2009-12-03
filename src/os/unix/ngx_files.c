@@ -8,6 +8,13 @@
 #include <ngx_core.h>
 
 
+#if (NGX_HAVE_FILE_AIO)
+
+ngx_uint_t  ngx_file_aio = 1;
+
+#endif
+
+
 ssize_t
 ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
 {
@@ -274,9 +281,8 @@ ngx_read_dir(ngx_dir_t *dir)
     if (dir->de) {
 #if (NGX_HAVE_D_TYPE)
         dir->type = dir->de->d_type;
-        dir->valid_type = dir->type ? 1 : 0;
 #else
-        dir->valid_type = 0;
+        dir->type = 0;
 #endif
         return NGX_OK;
     }
@@ -394,6 +400,26 @@ ngx_unlock_fd(ngx_fd_t fd)
 
     return 0;
 }
+
+
+#if (NGX_HAVE_POSIX_FADVISE)
+
+ngx_int_t
+ngx_read_ahead(ngx_fd_t fd, size_t n)
+{
+    int  err;
+
+    err = posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+
+    if (err == 0) {
+        return 0;
+    }
+
+    ngx_set_errno(err);
+    return NGX_FILE_ERROR;
+}
+
+#endif
 
 
 #if (NGX_HAVE_O_DIRECT)

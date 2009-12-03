@@ -12,6 +12,8 @@
 
 static ngx_int_t ngx_http_file_cache_read(ngx_http_request_t *r,
     ngx_http_cache_t *c);
+static ssize_t ngx_http_file_cache_aio_read(ngx_http_request_t *r,
+    ngx_http_cache_t *c);
 #if (NGX_HAVE_FILE_AIO)
 static void ngx_http_cache_aio_event_handler(ngx_event_t *ev);
 #endif
@@ -330,40 +332,13 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
 
     c = r->cache;
 
-#if (NGX_HAVE_FILE_AIO)
-    {
-    ngx_http_core_loc_conf_t      *clcf;
+    n = ngx_http_file_cache_aio_read(r, c);
 
-    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
-
-    if (clcf->aio) {
-        n = ngx_file_aio_read(&c->file, c->buf->pos, c->body_start, 0, r->pool);
-
-        if (n == NGX_AGAIN) {
-            c->file.aio->data = r;
-            c->file.aio->handler = ngx_http_cache_aio_event_handler;
-
-            r->main->blocked++;
-            r->aio = 1;
-
-            return NGX_AGAIN;
-        }
-
-    } else {
-        n = ngx_read_file(&c->file, c->buf->pos, c->body_start, 0);
-    }
-    }
-#else
-
-    n = ngx_read_file(&c->file, c->buf->pos, c->body_start, 0);
-
-#endif
-
-    if (n == NGX_ERROR) {
+    if (n < 0) {
         return n;
     }
 
-    if ((size_t) n <= c->header_start) {
+    if ((size_t) n < c->header_start) {
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,
                       "cache file \"%s\" is too small", c->file.name.data);
         return NGX_ERROR;
@@ -432,8 +407,46 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
 }
 
 
+static ssize_t
+ngx_http_file_cache_aio_read(ngx_http_request_t *r, ngx_http_cache_t *c)
+{
 #if (NGX_HAVE_FILE_AIO)
+    ssize_t                    n;
+    ngx_http_core_loc_conf_t  *clcf;
 
+    if (!ngx_file_aio) {
+        goto noaio;
+    }
+
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+    if (!clcf->aio) {
+        goto noaio;
+    }
+
+    n = ngx_file_aio_read(&c->file, c->buf->pos, c->body_start, 0, r->pool);
+
+    if (n != NGX_AGAIN) {
+        return n;
+    }
+
+    c->file.aio->data = r;
+    c->file.aio->handler = ngx_http_cache_aio_event_handler;
+
+    r->main->blocked++;
+    r->aio = 1;
+
+    return NGX_AGAIN;
+
+noaio:
+
+#endif
+
+    return ngx_read_file(&c->file, c->buf->pos, c->body_start, 0);
+}
+
+
+#if (NGX_HAVE_FILE_AIO)
 
 static void
 ngx_http_cache_aio_event_handler(ngx_event_t *ev)
@@ -692,7 +705,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
 void
 ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
 {
-    off_t                   size;
+    off_t                   size, length;
     ngx_int_t               rc;
     ngx_file_uniq_t         uniq;
     ngx_file_info_t         fi;
@@ -714,6 +727,7 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
     cache = c->file_cache;
 
     uniq = 0;
+    length = 0;
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http file cache rename: \"%s\" to \"%s\"",
@@ -738,10 +752,11 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
 
         } else {
             uniq = ngx_file_uniq(&fi);
+            length = ngx_file_size(&fi);
         }
     }
 
-    size = (c->length + cache->bsize - 1) / cache->bsize;
+    size = (length + cache->bsize - 1) / cache->bsize;
 
     ngx_shmtx_lock(&cache->shpool->mutex);
 
@@ -751,7 +766,7 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
 
     size = size - (c->node->length + cache->bsize - 1) / cache->bsize;
 
-    c->node->length = c->length;
+    c->node->length = length;
 
     cache->sh->size += size;
 

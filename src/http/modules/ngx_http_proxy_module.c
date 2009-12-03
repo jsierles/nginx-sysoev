@@ -229,6 +229,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_client_abort),
       NULL },
 
+    { ngx_string("proxy_bind"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_http_upsteam_bind_set_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.local),
+      NULL },
+
     { ngx_string("proxy_connect_timeout"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
@@ -717,17 +724,22 @@ ngx_http_proxy_eval(ngx_http_request_t *r, ngx_http_proxy_ctx_t *ctx,
         return NGX_ERROR;
     }
 
-    if (url.uri.len && url.uri.data[0] == '?') {
-        p = ngx_pnalloc(r->pool, url.uri.len + 1);
-        if (p == NULL) {
-            return NGX_ERROR;
+    if (url.uri.len) {
+        if (url.uri.data[0] == '?') {
+            p = ngx_pnalloc(r->pool, url.uri.len + 1);
+            if (p == NULL) {
+                return NGX_ERROR;
+            }
+
+            *p++ = '/';
+            ngx_memcpy(p, url.uri.data, url.uri.len);
+
+            url.uri.len++;
+            url.uri.data = p - 1;
         }
 
-        *p++ = '/';
-        ngx_memcpy(p, url.uri.data, url.uri.len);
-
-        url.uri.len++;
-        url.uri.data = p - 1;
+    } else {
+        url.uri = r->unparsed_uri;
     }
 
     ctx->vars.key_start = u->schema;
@@ -1218,7 +1230,6 @@ ngx_http_proxy_process_status_line(ngx_http_request_t *r)
 
         if (r->cache) {
             r->http_version = NGX_HTTP_VERSION_9;
-            u->headers_in.status_n = NGX_HTTP_OK;
             return NGX_OK;
         }
 
@@ -1234,7 +1245,6 @@ ngx_http_proxy_process_status_line(ngx_http_request_t *r)
 #endif
 
         r->http_version = NGX_HTTP_VERSION_9;
-        u->headers_in.status_n = NGX_HTTP_OK;
         u->state->status = NGX_HTTP_OK;
 
         return NGX_OK;

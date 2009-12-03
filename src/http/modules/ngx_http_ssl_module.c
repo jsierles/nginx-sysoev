@@ -13,7 +13,7 @@ typedef ngx_int_t (*ngx_ssl_variable_handler_pt)(ngx_connection_t *c,
     ngx_pool_t *pool, ngx_str_t *s);
 
 
-#define NGX_DEFAULT_CIPHERS  "ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM"
+#define NGX_DEFAULT_CIPHERS  "HIGH:!ADH:!MD5"
 
 
 static ngx_int_t ngx_http_ssl_static_variable(ngx_http_request_t *r,
@@ -409,7 +409,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         == 0)
     {
         ngx_log_error(NGX_LOG_WARN, cf->log, 0,
-            "nginx was build with SNI support, however, now it is linked "
+            "nginx was built with SNI support, however, now it is linked "
             "dynamically to an OpenSSL library which has no tlsext support, "
             "therefore SNI is not available");
     }

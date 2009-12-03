@@ -15,6 +15,7 @@ ngx_os_io_t  ngx_io;
 ngx_listening_t *
 ngx_create_listening(ngx_conf_t *cf, void *sockaddr, socklen_t socklen)
 {
+    size_t            len;
     ngx_listening_t  *ls;
     struct sockaddr  *sa;
     u_char            text[NGX_SOCKADDR_STRLEN];
@@ -36,22 +37,19 @@ ngx_create_listening(ngx_conf_t *cf, void *sockaddr, socklen_t socklen)
     ls->sockaddr = sa;
     ls->socklen = socklen;
 
-    ls->addr_text.len = ngx_sock_ntop(sa, text, NGX_SOCKADDR_STRLEN, 1);
-
-    ls->addr_text.data = ngx_pnalloc(cf->pool, ls->addr_text.len);
-    if (ls->addr_text.data == NULL) {
-        return NULL;
-    }
-
-    ngx_memcpy(ls->addr_text.data, text, ls->addr_text.len);
-
-    ls->fd = (ngx_socket_t) -1;
-    ls->type = SOCK_STREAM;
+    len = ngx_sock_ntop(sa, text, NGX_SOCKADDR_STRLEN, 1);
+    ls->addr_text.len = len;
 
     switch (ls->sockaddr->sa_family) {
 #if (NGX_HAVE_INET6)
     case AF_INET6:
          ls->addr_text_max_len = NGX_INET6_ADDRSTRLEN;
+         break;
+#endif
+#if (NGX_HAVE_UNIX_DOMAIN)
+    case AF_UNIX:
+         ls->addr_text_max_len = NGX_UNIX_ADDRSTRLEN;
+         len++;
          break;
 #endif
     case AF_INET:
@@ -61,6 +59,16 @@ ngx_create_listening(ngx_conf_t *cf, void *sockaddr, socklen_t socklen)
          ls->addr_text_max_len = NGX_SOCKADDR_STRLEN;
          break;
     }
+
+    ls->addr_text.data = ngx_pnalloc(cf->pool, len);
+    if (ls->addr_text.data == NULL) {
+        return NULL;
+    }
+
+    ngx_memcpy(ls->addr_text.data, text, len);
+
+    ls->fd = (ngx_socket_t) -1;
+    ls->type = SOCK_STREAM;
 
     ls->backlog = NGX_LISTEN_BACKLOG;
     ls->rcvbuf = -1;
@@ -109,11 +117,20 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 #if (NGX_HAVE_INET6)
         case AF_INET6:
              ls[i].addr_text_max_len = NGX_INET6_ADDRSTRLEN;
+             len = NGX_INET6_ADDRSTRLEN + sizeof(":65535") - 1;
+             break;
+#endif
+
+#if (NGX_HAVE_UNIX_DOMAIN)
+        case AF_UNIX:
+             ls[i].addr_text_max_len = NGX_UNIX_ADDRSTRLEN;
+             len = NGX_UNIX_ADDRSTRLEN;
              break;
 #endif
 
         case AF_INET:
              ls[i].addr_text_max_len = NGX_INET_ADDRSTRLEN;
+             len = NGX_INET_ADDRSTRLEN + sizeof(":65535") - 1;
              break;
 
         default:
@@ -123,8 +140,6 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
             ls[i].ignore = 1;
             continue;
         }
-
-        len = ls[i].addr_text_max_len + sizeof(":65535") - 1;
 
         ls[i].addr_text.data = ngx_pnalloc(cycle->pool, len);
         if (ls[i].addr_text.data == NULL) {
@@ -356,6 +371,29 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
 
                 continue;
             }
+
+#if (NGX_HAVE_UNIX_DOMAIN)
+
+            if (ls[i].sockaddr->sa_family == AF_UNIX) {
+                mode_t   mode;
+                u_char  *name;
+
+                name = ls[i].addr_text.data + sizeof("unix:") - 1;
+                mode = (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+
+                if (chmod((char *) name, mode) == -1) {
+                    ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
+                                  "chmod() \"%s\" failed", name);
+                }
+
+                if (ngx_test_config) {
+                    if (ngx_delete_file(name) == -1) {
+                        ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
+                                      ngx_delete_file_n " %s failed", name);
+                    }
+                }
+            }
+#endif
 
             if (listen(s, ls[i].backlog) == -1) {
                 ngx_log_error(NGX_LOG_EMERG, log, ngx_socket_errno,
@@ -603,6 +641,22 @@ ngx_close_listening_sockets(ngx_cycle_t *cycle)
             ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_socket_errno,
                           ngx_close_socket_n " %V failed", &ls[i].addr_text);
         }
+
+#if (NGX_HAVE_UNIX_DOMAIN)
+
+        if (ls[i].sockaddr->sa_family == AF_UNIX
+            && ngx_process <= NGX_PROCESS_MASTER
+            && ngx_new_binary == 0)
+        {
+            u_char *name = ls[i].addr_text.data + sizeof("unix:") - 1;
+
+            if (ngx_delete_file(name) == -1) {
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_socket_errno,
+                              ngx_delete_file_n " %s failed", name);
+            }
+        }
+
+#endif
 
         ls[i].fd = (ngx_socket_t) -1;
     }
@@ -858,7 +912,6 @@ ngx_connection_local_sockaddr(ngx_connection_t *c, ngx_str_t *s,
             return NGX_ERROR;
         }
 
-        c->local_socklen = len;
         ngx_memcpy(c->local_sockaddr, &sa, len);
     }
 
