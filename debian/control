@@ -1,7 +1,7 @@
 Source: nginx
 Section: web
 Priority: optional
-Maintainer: Kirill A. Korinskiy <catap@catap.ru>
+Maintainer: Joshua Sierles <joshua@37signals.com>
 Build-Depends: debhelper (>= 5), libpcre3-dev, zlib1g-dev, libssl-dev, libxslt1-dev, libgd2-noxpm-dev | libgd2-xpm-dev | libgd-dev, libperl-dev, libgeoip-dev
 Standards-Version: 3.8.0
 Homepage: http://nginx.net

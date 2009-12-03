@@ -1,3 +1,19 @@
+nginx (0.8.29-1) unstable; urgency=low
+
+  [ Igor Sysoev ]
+  * nginx 0.8.20
+  * nginx 0.8.21
+  * nginx 0.8.22
+  * nginx 0.8.23
+  * nginx 0.8.24
+  * nginx 0.8.25
+  * nginx 0.8.26
+  * nginx 0.8.27
+  * nginx 0.8.28
+  * nginx 0.8.29
+
+ -- Joshua Sierles <joshua@37signals.com>  Thu, 12 Dec 2009 13:27:19 +0100
+
 nginx (0.8.19-1) unstable; urgency=low
 
   [ Igor Sysoev ]
