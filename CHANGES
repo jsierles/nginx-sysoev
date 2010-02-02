@@ -1,4 +1,101 @@
 
+Changes with nginx 0.8.33                                        01 Feb 2010
+
+    *) Security: now nginx/Windows ignores trailing spaces in URI.
+       Thanks to Dan Crowley, Core Security Technologies.
+
+    *) Security: now nginx/Windows ignores short files names.
+       Thanks to Dan Crowley, Core Security Technologies.
+
+    *) Change: now keepalive connections after POST requests are not 
+       disabled for MSIE 7.0+. Thanks to Adam Lounds.
+
+    *) Workaround: now keepalive connections are disabled for Safari. 
+       Thanks to Joshua Sierles.
+
+    *) Bugfix: if a proxied or FastCGI request was internally redirected to 
+       another proxied or FastCGI location, then $upstream_response_time 
+       variable may have abnormally large value; the bug had appeared in 
+       0.8.7.
+
+    *) Bugfix: a segmentation fault might occur in a worker process, while 
+       discarding a request body; the bug had appeared in 0.8.11.
+
+
+Changes with nginx 0.8.32                                        11 Jan 2010
+
+    *) Bugfix: UTF-8 encoding usage in the ngx_http_autoindex_module.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: regular expression named captures worked for two names only. 
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: now the "localhost" name is used in the "Host" request 
+       header line, if an unix domain socket is defined in the "auth_http" 
+       directive.
+       Thanks to Maxim Dounin.
+
+    *) Bugfix: nginx did not support chunked transfer encoding for 201 
+       responses.
+       Thanks to Julian Reich.
+
+    *) Bugfix: if the "expires modified" set date in the past, then a 
+       negative number was set in the "Cache-Control" response header 
+       line.
+       Thanks to Alex Kapranoff.
+
+
+Changes with nginx 0.8.31                                        23 Dec 2009
+
+    *) Feature: now the "error_page" directive may redirect the 301 and 302 
+       responses.
+
+    *) Feature: the $geoip_city_continent_code, $geoip_latitude, and 
+       $geoip_longitude variables.
+       Thanks to Arvind Sundararajan.
+
+    *) Feature: now the ngx_http_image_filter_module deletes always EXIF 
+       and other application specific data if the data consume more than 5% 
+       of a JPEG file.
+
+    *) Bugfix: nginx closed a connection if a cached response had an empty 
+       body.
+       Thanks to Piotr Sikora.
+
+    *) Bugfix: nginx might not be built by gcc 4.x if the -O2 or higher 
+       optimization option was used.
+       Thanks to Maxim Dounin and Denis F. Latypoff.
+
+    *) Bugfix: regular expressions in location were always tested in 
+       case-sensitive mode; the bug had appeared in 0.8.25.
+
+    *) Bugfix: nginx cached a 304 response if there was the "If-None-Match" 
+       header line in a proxied request.
+       Thanks to Tim Dettrick and David Kostal.
+
+    *) Bugfix: nginx/Windows tried to delete a temporary file twice if the 
+       file should replace an already existent file.
+
+
+Changes with nginx 0.8.30                                        15 Dec 2009
+
+    *) Change: now the default buffer size of the 
+       "large_client_header_buffers" directive is 8K.
+       Thanks to Andrew Cholakian.
+
+    *) Feature: the conf/fastcgi.conf for simple FastCGI configurations.
+
+    *) Bugfix: nginx/Windows tried to rename a temporary file twice if the 
+       file should replace an already existent file.
+
+    *) Bugfix: of "double free or corruption" error issued if host could 
+       not be resolved; the bug had appeared in 0.8.22.
+       Thanks to Konstantin Svist.
+
+    *) Bugfix: in libatomic usage on some platforms.
+       Thanks to W-Mark Kubacki.
+
+
 Changes with nginx 0.8.29                                        30 Nov 2009
 
     *) Change: now the "009" status code is written to an access log for 

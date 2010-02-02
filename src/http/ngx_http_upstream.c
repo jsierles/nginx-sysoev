@@ -366,6 +366,7 @@ ngx_http_upstream_create(ngx_http_request_t *r)
         r->main->count++;
         ngx_http_upstream_cleanup(r);
         *u->cleanup = NULL;
+        u->cleanup = NULL;
     }
 
     u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
@@ -1548,7 +1549,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     /* rc == NGX_OK */
 
-    if (u->headers_in.status_n >= NGX_HTTP_BAD_REQUEST) {
+    if (u->headers_in.status_n > NGX_HTTP_SPECIAL_RESPONSE) {
 
         if (r->subrequest_in_memory) {
             u->buffer.last = u->buffer.pos;
@@ -2856,6 +2857,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
 
     if (u->cleanup) {
         *u->cleanup = NULL;
+        u->cleanup = NULL;
     }
 
     if (u->resolved && u->resolved->ctx) {
@@ -4204,7 +4206,7 @@ ngx_http_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
 
 
 char *
-ngx_http_upsteam_bind_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
+ngx_http_upstream_bind_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf)
 {
     char  *p = conf;

@@ -27,6 +27,8 @@ $NGX_OBJS/src/http/modules/perl/Makefile:				\
 		&& NGX_PM_CFLAGS="\$(NGX_PM_CFLAGS) -g $NGX_CC_OPT"	\
 			NGX_PCRE=$PCRE					\
 			NGX_OBJS=$NGX_OBJS				\
-		$NGX_PERL Makefile.PL INSTALLDIRS=vendor
+		$NGX_PERL Makefile.PL					\
+			LIB=$NGX_PERL_MODULES				\
+			INSTALLSITEMAN3DIR=$NGX_PERL_MODULES_MAN
 
 END
