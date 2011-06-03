@@ -58,6 +58,8 @@ static ngx_int_t ngx_http_variable_request_filename(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_http_variable_server_name(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_http_variable_connection(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_http_variable_request_method(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_http_variable_remote_user(ngx_http_request_t *r,
@@ -194,6 +196,8 @@ static ngx_http_variable_t  ngx_http_core_variables[] = {
       NGX_HTTP_VAR_NOCACHEABLE, 0 },
 
     { ngx_string("server_name"), NULL, ngx_http_variable_server_name, 0, 0, 0 },
+
+    { ngx_string("connection"), NULL, ngx_http_variable_connection, 0, 0, 0 },
 
     { ngx_string("request_method"), NULL,
       ngx_http_variable_request_method, 0,
@@ -1239,6 +1243,22 @@ ngx_http_variable_server_name(ngx_http_request_t *r,
     v->no_cacheable = 0;
     v->not_found = 0;
     v->data = cscf->server_name.data;
+
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_http_variable_connection(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    u_char *p;
+    p = ngx_pnalloc(r->pool, NGX_ATOMIC_T_LEN);
+  
+    v->len = ngx_sprintf(p, "%ui", r->connection->number) - p;
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+    v->data = p;
 
     return NGX_OK;
 }
