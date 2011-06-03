@@ -30,12 +30,6 @@ typedef struct {
 } ngx_http_perl_variable_t;
 
 
-typedef struct {
-    SV                *sv;
-    PerlInterpreter   *perl;
-} ngx_http_perl_cleanup_t;
-
-
 #if (NGX_HTTP_SSI)
 static ngx_int_t ngx_http_perl_ssi(ngx_http_request_t *r,
     ngx_http_ssi_ctx_t *ssi_ctx, ngx_str_t **params);
@@ -174,10 +168,6 @@ ngx_http_perl_xs_init(pTHX)
 static ngx_int_t
 ngx_http_perl_handler(ngx_http_request_t *r)
 {
-    if (r->zero_in_uri) {
-        return NGX_HTTP_NOT_FOUND;
-    }
-
     r->main->count++;
 
     ngx_http_perl_handle_request(r);
@@ -487,8 +477,7 @@ ngx_http_perl_init_interpreter(ngx_conf_t *cf, ngx_http_perl_main_conf_t *pmcf)
             return NGX_CONF_ERROR;
         }
 
-        m->len = sizeof(NGX_PERL_MODULES) - 1;
-        m->data = NGX_PERL_MODULES;
+        ngx_str_set(m, NGX_PERL_MODULES);
     }
 #endif
 

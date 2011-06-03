@@ -11,10 +11,10 @@
 
 
 typedef struct {
-     int     signo;
-     char   *signame;
-     char   *name;
-     void  (*handler)(int signo);
+    int     signo;
+    char   *signame;
+    char   *name;
+    void  (*handler)(int signo);
 } ngx_signal_t;
 
 
@@ -317,7 +317,7 @@ ngx_signal_handler(int signo)
         }
     }
 
-    ngx_time_update(0, 0);
+    ngx_time_sigsafe_update();
 
     action = "";
 
@@ -479,16 +479,15 @@ ngx_process_get_status(void)
              */
 
             if (err == NGX_ECHILD) {
-                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, errno,
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, err,
                               "waitpid() failed");
                 return;
             }
 
 #endif
 
-            ngx_log_error(NGX_LOG_ALERT, ngx_cycle->log, errno,
+            ngx_log_error(NGX_LOG_ALERT, ngx_cycle->log, err,
                           "waitpid() failed");
-
             return;
         }
 

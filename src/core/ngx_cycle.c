@@ -24,6 +24,7 @@ static ngx_pool_t     *ngx_temp_pool;
 static ngx_event_t     ngx_cleaner_event;
 
 ngx_uint_t             ngx_test_config;
+ngx_uint_t             ngx_quiet_mode;
 
 #if (NGX_THREADS)
 ngx_tls_key_t          ngx_core_tls_key;
@@ -63,7 +64,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     tp = ngx_timeofday();
     tp->sec = 0;
 
-    ngx_time_update(0, 0);
+    ngx_time_update();
 
 
     log = old_cycle->log;
@@ -180,6 +181,9 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     cycle->listening.pool = pool;
 
 
+    ngx_queue_init(&cycle->reusable_connections_queue);
+
+
     cycle->conf_ctx = ngx_pcalloc(pool, ngx_max_module * sizeof(void *));
     if (cycle->conf_ctx == NULL) {
         ngx_destroy_pool(pool);
@@ -266,7 +270,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-    if (ngx_test_config) {
+    if (ngx_test_config && !ngx_quiet_mode) {
         ngx_log_stderr(0, "the configuration file %s syntax is ok",
                        cycle->conf_file.data);
     }
@@ -666,6 +670,24 @@ old_shm_zone_done:
                           ngx_close_socket_n " listening socket on %V failed",
                           &ls[i].addr_text);
         }
+
+#if (NGX_HAVE_UNIX_DOMAIN)
+
+        if (ls[i].sockaddr->sa_family == AF_UNIX) {
+            u_char  *name;
+
+            name = ls[i].addr_text.data + sizeof("unix:") - 1;
+
+            ngx_log_error(NGX_LOG_WARN, cycle->log, 0,
+                          "deleting socket %s", name);
+
+            if (ngx_delete_file(name) == -1) {
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_socket_errno,
+                              ngx_delete_file_n " %s failed", name);
+            }
+        }
+
+#endif
     }
 
 
@@ -835,6 +857,9 @@ ngx_cmp_sockaddr(struct sockaddr *sa1, struct sockaddr *sa2)
 #if (NGX_HAVE_INET6)
     struct sockaddr_in6  *sin61, *sin62;
 #endif
+#if (NGX_HAVE_UNIX_DOMAIN)
+    struct sockaddr_un   *saun1, *saun2;
+#endif
 
     if (sa1->sa_family != sa2->sa_family) {
         return NGX_DECLINED;
@@ -847,7 +872,7 @@ ngx_cmp_sockaddr(struct sockaddr *sa1, struct sockaddr *sa2)
         sin61 = (struct sockaddr_in6 *) sa1;
         sin62 = (struct sockaddr_in6 *) sa2;
 
-        if (sin61->sin6_port != sin61->sin6_port) {
+        if (sin61->sin6_port != sin62->sin6_port) {
             return NGX_DECLINED;
         }
 
@@ -856,6 +881,21 @@ ngx_cmp_sockaddr(struct sockaddr *sa1, struct sockaddr *sa2)
         }
 
         break;
+#endif
+
+#if (NGX_HAVE_UNIX_DOMAIN)
+    case AF_UNIX:
+       saun1 = (struct sockaddr_un *) sa1;
+       saun2 = (struct sockaddr_un *) sa2;
+
+       if (ngx_memcmp(&saun1->sun_path, &saun2->sun_path,
+                      sizeof(saun1->sun_path))
+           != 0)
+       {
+           return NGX_DECLINED;
+       }
+
+       break;
 #endif
 
     default: /* AF_INET */

@@ -38,12 +38,28 @@
 #define NGX_HTTP_IMS_BEFORE             2
 
 
+#define NGX_HTTP_KEEPALIVE_DISABLE_NONE    0x0002
+#define NGX_HTTP_KEEPALIVE_DISABLE_MSIE6   0x0004
+#define NGX_HTTP_KEEPALIVE_DISABLE_SAFARI  0x0008
+
+
 typedef struct ngx_http_location_tree_node_s  ngx_http_location_tree_node_t;
 typedef struct ngx_http_core_loc_conf_s  ngx_http_core_loc_conf_t;
 
 
 typedef struct {
-    u_char                     sockaddr[NGX_SOCKADDRLEN];
+    union {
+        struct sockaddr        sockaddr;
+        struct sockaddr_in     sockaddr_in;
+#if (NGX_HAVE_INET6)
+        struct sockaddr_in6    sockaddr_in6;
+#endif
+#if (NGX_HAVE_UNIX_DOMAIN)
+        struct sockaddr_un     sockaddr_un;
+#endif
+        u_char                 sockaddr_data[NGX_SOCKADDRLEN];
+    } u;
+
     socklen_t                  socklen;
 
     unsigned                   set:1;
@@ -60,6 +76,9 @@ typedef struct {
     int                        backlog;
     int                        rcvbuf;
     int                        sndbuf;
+#if (NGX_HAVE_SETFIB)
+    int                        setfib;
+#endif
 
 #if (NGX_HAVE_DEFERRED_ACCEPT && defined SO_ACCEPTFILTER)
     char                      *accept_filter;
@@ -272,15 +291,18 @@ struct ngx_http_core_loc_conf_s {
 #endif
 
     unsigned      noname:1;   /* "if () {}" block or limit_except */
+    unsigned      lmt_excpt:1;
     unsigned      named:1;
 
     unsigned      exact_match:1;
     unsigned      noregex:1;
 
     unsigned      auto_redirect:1;
-    unsigned      alias:1;
 #if (NGX_HTTP_GZIP)
     unsigned      gzip_disable_msie6:2;
+#if (NGX_HTTP_DEGRADATION)
+    unsigned      gzip_disable_degradation:2;
+#endif
 #endif
 
     ngx_http_location_tree_node_t   *static_locations;
@@ -296,6 +318,8 @@ struct ngx_http_core_loc_conf_s {
 
     ngx_http_handler_pt  handler;
 
+    /* location name length for inclusive location with inherited alias */
+    size_t        alias;
     ngx_str_t     root;                    /* root, alias */
     ngx_str_t     post_action;
 
@@ -330,6 +354,7 @@ struct ngx_http_core_loc_conf_s {
     time_t        keepalive_header;        /* keepalive_timeout */
 
     ngx_uint_t    keepalive_requests;      /* keepalive_requests */
+    ngx_uint_t    keepalive_disable;       /* keepalive_disable */
     ngx_uint_t    satisfy;                 /* satisfy */
     ngx_uint_t    if_modified_since;       /* if_modified_since */
     ngx_uint_t    client_body_in_file_only; /* client_body_in_file_only */
@@ -352,6 +377,7 @@ struct ngx_http_core_loc_conf_s {
     ngx_flag_t    log_subrequest;          /* log_subrequest */
     ngx_flag_t    recursive_error_pages;   /* recursive_error_pages */
     ngx_flag_t    server_tokens;           /* server_tokens */
+    ngx_flag_t    chunked_transfer_encoding; /* chunked_transfer_encoding */
 
 #if (NGX_HTTP_GZIP)
     ngx_flag_t    gzip_vary;               /* gzip_vary */
@@ -416,6 +442,8 @@ struct ngx_http_location_tree_node_s {
 void ngx_http_core_run_phases(ngx_http_request_t *r);
 ngx_int_t ngx_http_core_generic_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph);
+ngx_int_t ngx_http_core_rewrite_phase(ngx_http_request_t *r,
+    ngx_http_phase_handler_t *ph);
 ngx_int_t ngx_http_core_find_config_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph);
 ngx_int_t ngx_http_core_post_rewrite_phase(ngx_http_request_t *r,
@@ -433,6 +461,8 @@ ngx_int_t ngx_http_core_content_phase(ngx_http_request_t *r,
 void *ngx_http_test_content_type(ngx_http_request_t *r, ngx_hash_t *types_hash);
 ngx_int_t ngx_http_set_content_type(ngx_http_request_t *r);
 void ngx_http_set_exten(ngx_http_request_t *r);
+ngx_int_t ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
+    ngx_str_t *ct, ngx_http_complex_value_t *cv);
 u_char *ngx_http_map_uri_to_path(ngx_http_request_t *r, ngx_str_t *name,
     size_t *root_length, size_t reserved);
 ngx_int_t ngx_http_auth_basic_user(ngx_http_request_t *r);

@@ -43,6 +43,7 @@
 #define NGX_HTTP_UPSTREAM_IGN_XA_EXPIRES     0x00000004
 #define NGX_HTTP_UPSTREAM_IGN_EXPIRES        0x00000008
 #define NGX_HTTP_UPSTREAM_IGN_CACHE_CONTROL  0x00000010
+#define NGX_HTTP_UPSTREAM_IGN_SET_COOKIE     0x00000020
 
 
 typedef struct {
@@ -52,7 +53,7 @@ typedef struct {
     ngx_uint_t                       status;
     time_t                           response_sec;
     ngx_uint_t                       response_msec;
-    off_t                           response_length;
+    off_t                            response_length;
 
     ngx_str_t                       *peer;
 } ngx_http_upstream_state_t;
@@ -162,6 +163,8 @@ typedef struct {
     ngx_uint_t                       cache_methods;
 
     ngx_array_t                     *cache_valid;
+    ngx_array_t                     *cache_bypass;
+    ngx_array_t                     *no_cache;
 #endif
 
     ngx_array_t                     *store_lengths;
@@ -323,7 +326,7 @@ ngx_int_t ngx_http_upstream_create(ngx_http_request_t *r);
 void ngx_http_upstream_init(ngx_http_request_t *r);
 ngx_http_upstream_srv_conf_t *ngx_http_upstream_add(ngx_conf_t *cf,
     ngx_url_t *u, ngx_uint_t flags);
-char *ngx_http_upsteam_bind_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
+char *ngx_http_upstream_bind_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 ngx_int_t ngx_http_upstream_hide_headers_hash(ngx_conf_t *cf,
     ngx_http_upstream_conf_t *conf, ngx_http_upstream_conf_t *prev,
@@ -336,6 +339,7 @@ ngx_int_t ngx_http_upstream_hide_headers_hash(ngx_conf_t *cf,
 
 extern ngx_module_t        ngx_http_upstream_module;
 extern ngx_conf_bitmask_t  ngx_http_upstream_cache_method_mask[];
+extern ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[];
 
 
 #endif /* _NGX_HTTP_UPSTREAM_H_INCLUDED_ */

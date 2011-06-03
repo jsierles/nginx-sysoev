@@ -74,6 +74,13 @@ esac
 
 cat << END                                                    >> $NGX_MAKEFILE
 
+manpage:
+	sed -e "s|%%PREFIX%%|$NGX_PREFIX|" \\
+		-e "s|%%PID_PATH%%|$NGX_PID_PATH|" \\
+		-e "s|%%CONF_PATH%%|$NGX_CONF_PATH|" \\
+		-e "s|%%ERROR_LOG_PATH%%|$NGX_ERROR_LOG_PATH|" \\
+		< man/nginx.8 > $NGX_OBJS/nginx.8
+
 install:	$NGX_OBJS${ngx_dirsep}nginx${ngx_binext} \
 		$NGX_INSTALL_PERL_MODULES
 	test -d '\$(DESTDIR)$NGX_PREFIX' || mkdir -p '\$(DESTDIR)$NGX_PREFIX'
@@ -100,6 +107,20 @@ install:	$NGX_OBJS${ngx_dirsep}nginx${ngx_binext} \
 		|| cp conf/fastcgi_params '\$(DESTDIR)$NGX_CONF_PREFIX'
 	cp conf/fastcgi_params \
 		'\$(DESTDIR)$NGX_CONF_PREFIX/fastcgi_params.default'
+
+	test -f '\$(DESTDIR)$NGX_CONF_PREFIX/fastcgi.conf' \
+		|| cp conf/fastcgi.conf '\$(DESTDIR)$NGX_CONF_PREFIX'
+	cp conf/fastcgi.conf '\$(DESTDIR)$NGX_CONF_PREFIX/fastcgi.conf.default'
+
+	test -f '\$(DESTDIR)$NGX_CONF_PREFIX/uwsgi_params' \
+		|| cp conf/uwsgi_params '\$(DESTDIR)$NGX_CONF_PREFIX'
+	cp conf/uwsgi_params \
+		'\$(DESTDIR)$NGX_CONF_PREFIX/uwsgi_params.default'
+
+	test -f '\$(DESTDIR)$NGX_CONF_PREFIX/scgi_params' \
+		|| cp conf/scgi_params '\$(DESTDIR)$NGX_CONF_PREFIX'
+	cp conf/scgi_params \
+		'\$(DESTDIR)$NGX_CONF_PREFIX/scgi_params.default'
 
 	test -f '\$(DESTDIR)$NGX_CONF_PATH' \
 		|| cp conf/nginx.conf '\$(DESTDIR)$NGX_CONF_PATH'
@@ -132,6 +153,7 @@ cat << END >> Makefile
 
 build:
 	\$(MAKE) -f $NGX_MAKEFILE
+	\$(MAKE) -f $NGX_MAKEFILE manpage
 
 install:
 	\$(MAKE) -f $NGX_MAKEFILE install

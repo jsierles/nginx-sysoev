@@ -467,7 +467,7 @@ header_out(r, key, value)
     }
 
     if (header->key.len == sizeof("Content-Length") - 1
-        && ngx_strncasecmp(header->key.data, "Content-Length",
+        && ngx_strncasecmp(header->key.data, (u_char *) "Content-Length",
                            sizeof("Content-Length") - 1) == 0)
     {
         r->headers_out.content_length_n = (off_t) SvIV(value);
@@ -642,7 +642,7 @@ sendfile(r, filename, offset = -1, bytes = 0)
         XSRETURN_EMPTY;
     }
 
-    (void) ngx_cpystrn(path.data, filename, path.len + 1);
+    (void) ngx_cpystrn(path.data, (u_char *) filename, path.len + 1);
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
@@ -848,7 +848,7 @@ variable(r, name, value = NULL)
 
     #endif
 
-    vv = ngx_http_get_variable(r, &var, hash, 1);
+    vv = ngx_http_get_variable(r, &var, hash);
     if (vv == NULL) {
         XSRETURN_UNDEF;
     }
@@ -944,6 +944,7 @@ sleep(r, sleep, next)
     ngx_add_timer(r->connection->write, sleep);
 
     r->write_event_handler = ngx_http_perl_sleep_handler;
+    r->main->count++;
 
 
 void

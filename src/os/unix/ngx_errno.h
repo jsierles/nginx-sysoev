@@ -30,7 +30,6 @@ typedef int               ngx_err_t;
 #define NGX_EINVAL        EINVAL
 #define NGX_ENOSPC        ENOSPC
 #define NGX_EPIPE         EPIPE
-#define NGX_EAGAIN        EAGAIN
 #define NGX_EINPROGRESS   EINPROGRESS
 #define NGX_EADDRINUSE    EADDRINUSE
 #define NGX_ECONNABORTED  ECONNABORTED
@@ -48,6 +47,11 @@ typedef int               ngx_err_t;
 #define NGX_EILSEQ        EILSEQ
 #define NGX_ENOMOREFILES  0
 
+#if (__hpux__)
+#define NGX_EAGAIN        EWOULDBLOCK
+#else
+#define NGX_EAGAIN        EAGAIN
+#endif
 
 
 #define ngx_errno                  errno
@@ -56,18 +60,8 @@ typedef int               ngx_err_t;
 #define ngx_set_socket_errno(err)  errno = err
 
 
-#if (NGX_HAVE_STRERROR_R || NGX_HAVE_GNU_STRERROR_R)
-
-u_char *ngx_strerror_r(int err, u_char *errstr, size_t size);
-
-#else
-
-/* Solaris and Tru64 UNIX have thread-safe strerror() */
-
-#define ngx_strerror_r(err, errstr, size)  \
-    ngx_cpystrn(errstr, (u_char *) strerror(err), size)
-
-#endif
+u_char *ngx_strerror(ngx_err_t err, u_char *errstr, size_t size);
+ngx_uint_t ngx_strerror_init(void);
 
 
 #endif /* _NGX_ERRNO_H_INCLUDED_ */

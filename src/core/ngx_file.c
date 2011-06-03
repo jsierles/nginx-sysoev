@@ -591,16 +591,10 @@ ngx_ext_rename_file(ngx_str_t *src, ngx_str_t *to, ngx_ext_rename_file_t *ext)
 #if (NGX_WIN32)
 
     if (err == NGX_EEXIST) {
-        if (ngx_win32_rename_file(src, to, ext->log) == NGX_OK) {
+        err = ngx_win32_rename_file(src, to, ext->log);
 
-            if (ngx_rename_file(src->data, to->data) != NGX_FILE_ERROR) {
-                return NGX_OK;
-            }
-
-            err = ngx_errno;
-
-        } else {
-            err = 0;
+        if (err == 0) {
+            return NGX_OK;
         }
     }
 
@@ -768,10 +762,12 @@ ngx_copy_file(u_char *from, u_char *to, ngx_copy_file_t *cf)
         size -= n;
     }
 
-    if (ngx_set_file_time(to, nfd, cf->time) != NGX_OK) {
-        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
-                      ngx_set_file_time_n " \"%s\" failed", to);
-        goto failed;
+    if (cf->time != -1) {
+        if (ngx_set_file_time(to, nfd, cf->time) != NGX_OK) {
+            ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
+                          ngx_set_file_time_n " \"%s\" failed", to);
+            goto failed;
+        }
     }
 
     rc = NGX_OK;
@@ -829,8 +825,7 @@ ngx_walk_tree(ngx_tree_ctx_t *ctx, ngx_str_t *tree)
     ngx_str_t   file, buf;
     ngx_dir_t   dir;
 
-    buf.len = 0;
-    buf.data = NULL;
+    ngx_str_null(&buf);
 
     ngx_log_debug1(NGX_LOG_DEBUG_CORE, ctx->log, 0,
                    "walk tree \"%V\"", tree);

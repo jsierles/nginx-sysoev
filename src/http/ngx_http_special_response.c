@@ -65,6 +65,14 @@ static char ngx_http_error_302_page[] =
 ;
 
 
+static char ngx_http_error_303_page[] =
+"<html>" CRLF
+"<head><title>303 See Other</title></head>" CRLF
+"<body bgcolor=\"white\">" CRLF
+"<center><h1>303 See Other</h1></center>" CRLF
+;
+
+
 static char ngx_http_error_400_page[] =
 "<html>" CRLF
 "<head><title>400 Bad Request</title></head>" CRLF
@@ -193,6 +201,16 @@ static char ngx_http_error_416_page[] =
 ;
 
 
+static char ngx_http_error_494_page[] =
+"<html>" CRLF
+"<head><title>400 Request Header Or Cookie Too Large</title></head>"
+CRLF
+"<body bgcolor=\"white\">" CRLF
+"<center><h1>400 Bad Request</h1></center>" CRLF
+"<center>Request Header Or Cookie Too Large</center>" CRLF
+;
+
+
 static char ngx_http_error_495_page[] =
 "<html>" CRLF
 "<head><title>400 The SSL certificate error</title></head>"
@@ -281,7 +299,7 @@ static ngx_str_t ngx_http_error_pages[] = {
     /* ngx_null_string, */               /* 300 */
     ngx_string(ngx_http_error_301_page),
     ngx_string(ngx_http_error_302_page),
-    ngx_null_string,                     /* 303 */
+    ngx_string(ngx_http_error_303_page),
 
 #define NGX_HTTP_LAST_LEVEL_300  304
 #define NGX_HTTP_LEVEL_300       (NGX_HTTP_LAST_LEVEL_300 - 301)
@@ -307,6 +325,7 @@ static ngx_str_t ngx_http_error_pages[] = {
 #define NGX_HTTP_LAST_LEVEL_400  417
 #define NGX_HTTP_LEVEL_400       (NGX_HTTP_LAST_LEVEL_400 - 400)
 
+    ngx_string(ngx_http_error_494_page), /* 494, request header too large */
     ngx_string(ngx_http_error_495_page), /* 495, https certificate error */
     ngx_string(ngx_http_error_496_page), /* 496, https no certificate */
     ngx_string(ngx_http_error_497_page), /* 497, http to https */
@@ -421,17 +440,18 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
         err = error - NGX_HTTP_BAD_REQUEST + NGX_HTTP_LEVEL_200
                                            + NGX_HTTP_LEVEL_300;
 
-    } else if (error >= NGX_HTTP_OWN_CODES
+    } else if (error >= NGX_HTTP_NGINX_CODES
                && error < NGX_HTTP_LAST_LEVEL_500)
     {
         /* 49X, 5XX */
-        err = error - NGX_HTTP_OWN_CODES + NGX_HTTP_LEVEL_200
-                                         + NGX_HTTP_LEVEL_300
-                                         + NGX_HTTP_LEVEL_400;
+        err = error - NGX_HTTP_NGINX_CODES + NGX_HTTP_LEVEL_200
+                                           + NGX_HTTP_LEVEL_300
+                                           + NGX_HTTP_LEVEL_400;
         switch (error) {
             case NGX_HTTP_TO_HTTPS:
             case NGX_HTTPS_CERT_ERROR:
             case NGX_HTTPS_NO_CERT:
+            case NGX_HTTP_REQUEST_HEADER_TOO_LARGE:
                 r->err_status = NGX_HTTP_BAD_REQUEST;
                 break;
         }
@@ -515,9 +535,9 @@ ngx_http_send_error_page(ngx_http_request_t *r, ngx_http_err_page_t *err_page)
         r->expect_tested = 1;
     }
 
-    r->err_status = overwrite;
-
-    r->zero_in_uri = 0;
+    if (overwrite >= 0) {
+        r->err_status = overwrite;
+    }
 
     if (ngx_http_complex_value(r, &err_page->value, &uri) != NGX_OK) {
         return NGX_ERROR;
@@ -550,11 +570,17 @@ ngx_http_send_error_page(ngx_http_request_t *r, ngx_http_err_page_t *err_page)
         return NGX_ERROR;
     }
 
-    r->err_status = NGX_HTTP_MOVED_TEMPORARILY;
+    if (overwrite >= NGX_HTTP_MOVED_PERMANENTLY
+        && overwrite <= NGX_HTTP_SEE_OTHER)
+    {
+        r->err_status = overwrite;
+
+    } else {
+        r->err_status = NGX_HTTP_MOVED_TEMPORARILY;
+    }
 
     location->hash = 1;
-    location->key.len = sizeof("Location") - 1;
-    location->key.data = (u_char *) "Location";
+    ngx_str_set(&location->key, "Location");
     location->value = uri;
 
     r->headers_out.location = location;
@@ -565,7 +591,7 @@ ngx_http_send_error_page(ngx_http_request_t *r, ngx_http_err_page_t *err_page)
         return ngx_http_send_refresh(r);
     }
 
-    return ngx_http_send_special_response(r, clcf, NGX_HTTP_MOVED_TEMPORARILY
+    return ngx_http_send_special_response(r, clcf, r->err_status
                                                    - NGX_HTTP_MOVED_PERMANENTLY
                                                    + NGX_HTTP_LEVEL_200);
 }
@@ -593,32 +619,24 @@ ngx_http_send_special_response(ngx_http_request_t *r,
 
     msie_padding = 0;
 
-    if (!r->zero_body) {
-        if (ngx_http_error_pages[err].len) {
-            r->headers_out.content_length_n = ngx_http_error_pages[err].len
-                                              + len;
-            if (clcf->msie_padding
-                && (r->headers_in.msie || r->headers_in.chrome)
-                && r->http_version >= NGX_HTTP_VERSION_10
-                && err >= NGX_HTTP_LEVEL_300)
-            {
-                r->headers_out.content_length_n +=
-                                             sizeof(ngx_http_msie_padding) - 1;
-                msie_padding = 1;
-            }
-
-            r->headers_out.content_type_len = sizeof("text/html") - 1;
-            r->headers_out.content_type.len = sizeof("text/html") - 1;
-            r->headers_out.content_type.data = (u_char *) "text/html";
-            r->headers_out.content_type_lowcase = NULL;
-
-        } else {
-            r->headers_out.content_length_n = -1;
+    if (ngx_http_error_pages[err].len) {
+        r->headers_out.content_length_n = ngx_http_error_pages[err].len + len;
+        if (clcf->msie_padding
+            && (r->headers_in.msie || r->headers_in.chrome)
+            && r->http_version >= NGX_HTTP_VERSION_10
+            && err >= NGX_HTTP_LEVEL_300)
+        {
+            r->headers_out.content_length_n +=
+                                         sizeof(ngx_http_msie_padding) - 1;
+            msie_padding = 1;
         }
 
+        r->headers_out.content_type_len = sizeof("text/html") - 1;
+        ngx_str_set(&r->headers_out.content_type, "text/html");
+        r->headers_out.content_type_lowcase = NULL;
+
     } else {
-        r->headers_out.content_length_n = 0;
-        err = 0;
+        r->headers_out.content_length_n = -1;
     }
 
     if (r->headers_out.content_length) {
@@ -711,8 +729,7 @@ ngx_http_send_refresh(ngx_http_request_t *r)
     r->err_status = NGX_HTTP_OK;
 
     r->headers_out.content_type_len = sizeof("text/html") - 1;
-    r->headers_out.content_type.len = sizeof("text/html") - 1;
-    r->headers_out.content_type.data = (u_char *) "text/html";
+    ngx_str_set(&r->headers_out.content_type, "text/html");
     r->headers_out.content_type_lowcase = NULL;
 
     r->headers_out.location->hash = 0;

@@ -74,17 +74,17 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
         }
     }
 
-#if (NGX_HAVE_FILE_AIO)
-    if (ctx->aio) {
-        return NGX_AGAIN;
-    }
-#endif
-
     out = NULL;
     last_out = &out;
     last = NGX_NONE;
 
     for ( ;; ) {
+
+#if (NGX_HAVE_FILE_AIO)
+        if (ctx->aio) {
+            return NGX_AGAIN;
+        }
+#endif
 
         while (ctx->in) {
 
@@ -465,10 +465,7 @@ ngx_output_chain_copy_buf(ngx_output_chain_ctx_t *ctx)
     dst = ctx->buf;
 
     size = ngx_buf_size(src);
-
-    if (size > dst->end - dst->pos) {
-        size = dst->end - dst->pos;
-    }
+    size = ngx_min(size, dst->end - dst->pos);
 
     sendfile = ctx->sendfile & !ctx->directio;
 

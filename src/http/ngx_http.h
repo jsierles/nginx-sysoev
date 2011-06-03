@@ -51,6 +51,14 @@ struct ngx_http_log_ctx_s {
 };
 
 
+typedef struct {
+    ngx_uint_t           code;
+    ngx_uint_t           count;
+    u_char              *start;
+    u_char              *end;
+} ngx_http_status_t;
+
+
 #define ngx_http_get_module_ctx(r, module)  (r)->ctx[module.ctx_index]
 #define ngx_http_set_ctx(r, c, module)      r->ctx[module.ctx_index] = c;
 
@@ -70,6 +78,8 @@ int ngx_http_ssl_servername(ngx_ssl_conn_t *ssl_conn, int *ad, void *arg);
 ngx_int_t ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b);
 ngx_int_t ngx_http_parse_complex_uri(ngx_http_request_t *r,
     ngx_uint_t merge_slashes);
+ngx_int_t ngx_http_parse_status_line(ngx_http_request_t *r, ngx_buf_t *b,
+    ngx_http_status_t *status);
 ngx_int_t ngx_http_parse_unsafe_uri(ngx_http_request_t *r, ngx_str_t *uri,
     ngx_str_t *args, ngx_uint_t *flags);
 ngx_int_t ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
@@ -94,7 +104,7 @@ void ngx_http_empty_handler(ngx_event_t *wev);
 void ngx_http_request_empty_handler(ngx_http_request_t *r);
 
 
-#define ngx_http_ephemeral(r)  (ngx_http_ephemeral_t *) (&r->uri_start)
+#define ngx_http_ephemeral(r)  (void *) (&r->uri_start)
 
 
 #define NGX_HTTP_LAST   1
@@ -131,6 +141,10 @@ char *ngx_http_merge_types(ngx_conf_t *cf, ngx_array_t **keys,
     ngx_hash_t *prev_types_hash, ngx_str_t *default_types);
 ngx_int_t ngx_http_set_default_types(ngx_conf_t *cf, ngx_array_t **types,
     ngx_str_t *default_type);
+
+#if (NGX_HTTP_DEGRADATION)
+ngx_uint_t  ngx_http_degraded(ngx_http_request_t *);
+#endif
 
 
 extern ngx_module_t  ngx_http_module;

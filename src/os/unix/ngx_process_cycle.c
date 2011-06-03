@@ -168,7 +168,7 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
 
         sigsuspend(&set);
 
-        ngx_time_update(0, 0);
+        ngx_time_update();
 
         ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                        "wake up, sigio %i", sigio);
@@ -290,6 +290,11 @@ void
 ngx_single_process_cycle(ngx_cycle_t *cycle)
 {
     ngx_uint_t  i;
+
+    if (ngx_set_environment(cycle, NULL) == NULL) {
+        /* fatal */
+        exit(2);
+    }
 
     for (i = 0; ngx_modules[i]; i++) {
         if (ngx_modules[i]->init_process) {
@@ -856,13 +861,13 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_uint_t priority)
         }
     }
 
-    if (ccf->rlimit_core != NGX_CONF_UNSET_SIZE) {
+    if (ccf->rlimit_core != NGX_CONF_UNSET) {
         rlmt.rlim_cur = (rlim_t) ccf->rlimit_core;
         rlmt.rlim_max = (rlim_t) ccf->rlimit_core;
 
         if (setrlimit(RLIMIT_CORE, &rlmt) == -1) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "setrlimit(RLIMIT_CORE, %i) failed",
+                          "setrlimit(RLIMIT_CORE, %O) failed",
                           ccf->rlimit_core);
         }
     }
@@ -1342,7 +1347,7 @@ ngx_cache_manager_process_handler(ngx_event_t *ev)
 
             next = (n <= next) ? n : next;
 
-            ngx_time_update(0, 0);
+            ngx_time_update();
         }
     }
 
@@ -1372,7 +1377,7 @@ ngx_cache_loader_process_handler(ngx_event_t *ev)
 
         if (path[i]->loader) {
             path[i]->loader(path[i]->data);
-            ngx_time_update(0, 0);
+            ngx_time_update();
         }
     }
 

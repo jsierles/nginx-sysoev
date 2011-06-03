@@ -83,6 +83,8 @@ static u_char *ngx_http_log_pipe(ngx_http_request_t *r, u_char *buf,
     ngx_http_log_op_t *op);
 static u_char *ngx_http_log_time(ngx_http_request_t *r, u_char *buf,
     ngx_http_log_op_t *op);
+static u_char *ngx_http_log_iso8601(ngx_http_request_t *r, u_char *buf,
+    ngx_http_log_op_t *op);
 static u_char *ngx_http_log_msec(ngx_http_request_t *r, u_char *buf,
     ngx_http_log_op_t *op);
 static u_char *ngx_http_log_request_time(ngx_http_request_t *r, u_char *buf,
@@ -193,6 +195,8 @@ static ngx_http_log_var_t  ngx_http_log_vars[] = {
     { ngx_string("pipe"), 1, ngx_http_log_pipe },
     { ngx_string("time_local"), sizeof("28/Sep/1970:12:00:00 +0600") - 1,
                           ngx_http_log_time },
+    { ngx_string("time_iso8601"), sizeof("1970-09-28T12:00:00+06:00") - 1,
+                          ngx_http_log_iso8601 },
     { ngx_string("msec"), NGX_TIME_T_LEN + 4, ngx_http_log_msec },
     { ngx_string("request_time"), NGX_TIME_T_LEN + 4,
                           ngx_http_log_request_time },
@@ -510,6 +514,12 @@ ngx_http_log_time(ngx_http_request_t *r, u_char *buf, ngx_http_log_op_t *op)
                       ngx_cached_http_log_time.len);
 }
 
+static u_char *
+ngx_http_log_iso8601(ngx_http_request_t *r, u_char *buf, ngx_http_log_op_t *op)
+{
+    return ngx_cpymem(buf, ngx_cached_http_log_iso8601.data,
+                      ngx_cached_http_log_iso8601.len);
+}
 
 static u_char *
 ngx_http_log_msec(ngx_http_request_t *r, u_char *buf, ngx_http_log_op_t *op)
@@ -533,7 +543,7 @@ ngx_http_log_request_time(ngx_http_request_t *r, u_char *buf,
 
     ms = (ngx_msec_int_t)
              ((tp->sec - r->start_sec) * 1000 + (tp->msec - r->start_msec));
-    ms = (ms >= 0) ? ms : 0;
+    ms = ngx_max(ms, 0);
 
     return ngx_sprintf(buf, "%T.%03M", ms / 1000, ms % 1000);
 }
@@ -747,8 +757,7 @@ ngx_http_log_create_main_conf(ngx_conf_t *cf)
         return NULL;
     }
 
-    fmt->name.len = sizeof("combined") - 1;
-    fmt->name.data = (u_char *) "combined";
+    ngx_str_set(&fmt->name, "combined");
 
     fmt->flushes = NULL;
 
@@ -922,8 +931,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
 
     } else {
-        name.len = sizeof("combined") - 1;
-        name.data = (u_char *) "combined";
+        ngx_str_set(&name, "combined");
         lmcf->combined_used = 1;
     }
 

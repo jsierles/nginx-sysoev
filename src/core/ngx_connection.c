@@ -12,6 +12,9 @@
 ngx_os_io_t  ngx_io;
 
 
+static void ngx_drain_connections(void);
+
+
 ngx_listening_t *
 ngx_create_listening(ngx_conf_t *cf, void *sockaddr, socklen_t socklen)
 {
@@ -74,6 +77,10 @@ ngx_create_listening(ngx_conf_t *cf, void *sockaddr, socklen_t socklen)
     ls->rcvbuf = -1;
     ls->sndbuf = -1;
 
+#if (NGX_HAVE_SETFIB)
+    ls->setfib = -1;
+#endif
+
     return ls;
 }
 
@@ -96,14 +103,12 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
     ls = cycle->listening.elts;
     for (i = 0; i < cycle->listening.nelts; i++) {
 
-        /* AF_INET only */
-
-        ls[i].sockaddr = ngx_palloc(cycle->pool, sizeof(struct sockaddr_in));
+        ls[i].sockaddr = ngx_palloc(cycle->pool, NGX_SOCKADDRLEN);
         if (ls[i].sockaddr == NULL) {
             return NGX_ERROR;
         }
 
-        ls[i].socklen = sizeof(struct sockaddr_in);
+        ls[i].socklen = NGX_SOCKADDRLEN;
         if (getsockname(ls[i].fd, ls[i].sockaddr, &ls[i].socklen) == -1) {
             ngx_log_error(NGX_LOG_CRIT, cycle->log, ngx_socket_errno,
                           "getsockname() of the inherited "
@@ -180,6 +185,25 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 
             ls[i].sndbuf = -1;
         }
+
+#if 0
+        /* SO_SETFIB is currently a set only option */
+
+#if (NGX_HAVE_SETFIB)
+
+        if (getsockopt(ls[i].setfib, SOL_SOCKET, SO_SETFIB,
+                       (void *) &ls[i].setfib, &olen)
+            == -1)
+        {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_socket_errno,
+                          "getsockopt(SO_SETFIB) %V failed, ignored",
+                          &ls[i].addr_text);
+
+            ls[i].setfib = -1;
+        }
+
+#endif
+#endif
 
 #if (NGX_HAVE_DEFERRED_ACCEPT && defined SO_ACCEPTFILTER)
 
@@ -475,6 +499,19 @@ ngx_configure_listening_sockets(ngx_cycle_t *cycle)
             }
         }
 
+#if (NGX_HAVE_SETFIB)
+        if (ls[i].setfib != -1) {
+            if (setsockopt(ls[i].fd, SOL_SOCKET, SO_SETFIB,
+                           (const void *) &ls[i].setfib, sizeof(int))
+                == -1)
+            {
+                ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_socket_errno,
+                              "setsockopt(SO_SETFIB, %d) %V failed, ignored",
+                              ls[i].setfib, &ls[i].addr_text);
+            }
+        }
+#endif
+
 #if 0
         if (1) {
             int tcp_nodelay = 1;
@@ -685,6 +722,11 @@ ngx_get_connection(ngx_socket_t s, ngx_log_t *log)
     c = ngx_cycle->free_connections;
 
     if (c == NULL) {
+        ngx_drain_connections();
+        c = ngx_cycle->free_connections;
+    }
+
+    if (c == NULL) {
         ngx_log_error(NGX_LOG_ALERT, log, 0,
                       "%ui worker_connections are not enough",
                       ngx_cycle->connection_n);
@@ -827,6 +869,8 @@ ngx_close_connection(ngx_connection_t *c)
 
 #endif
 
+    ngx_reusable_connection(c, 0);
+
     log_error = c->log_error;
 
     ngx_free_connection(c);
@@ -862,6 +906,51 @@ ngx_close_connection(ngx_connection_t *c)
 
         ngx_log_error(level, ngx_cycle->log, err,
                       ngx_close_socket_n " %d failed", fd);
+    }
+}
+
+
+void
+ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
+{
+    ngx_log_debug1(NGX_LOG_DEBUG_CORE, c->log, 0,
+                   "reusable connection: %ui", reusable);
+
+    if (c->reusable) {
+        ngx_queue_remove(&c->queue);
+    }
+
+    c->reusable = reusable;
+
+    if (reusable) {
+        /* need cast as ngx_cycle is volatile */
+
+        ngx_queue_insert_head(
+            (ngx_queue_t *) &ngx_cycle->reusable_connections_queue, &c->queue);
+    }
+}
+
+
+static void
+ngx_drain_connections(void)
+{
+    ngx_int_t          i;
+    ngx_queue_t       *q;
+    ngx_connection_t  *c;
+
+    for (i = 0; i < 32; i++) {
+        if (ngx_queue_empty(&ngx_cycle->reusable_connections_queue)) {
+            break;
+        }
+
+        q = ngx_queue_last(&ngx_cycle->reusable_connections_queue);
+        c = ngx_queue_data(q, ngx_connection_t, queue);
+
+        ngx_log_debug0(NGX_LOG_DEBUG_CORE, c->log, 0,
+                       "reusing connection");
+
+        c->close = 1;
+        c->read->handler(c->read);
     }
 }
 

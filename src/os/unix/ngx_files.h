@@ -18,6 +18,15 @@ typedef ino_t                    ngx_file_uniq_t;
 
 
 typedef struct {
+    u_char                      *name;
+    size_t                       size;
+    void                        *addr;
+    ngx_fd_t                     fd;
+    ngx_log_t                   *log;
+} ngx_file_mapping_t;
+
+
+typedef struct {
     DIR                         *dir;
     struct dirent               *de;
     struct stat                  info;
@@ -64,6 +73,7 @@ typedef struct {
 #define NGX_FILE_OPEN            0
 #define NGX_FILE_TRUNCATE        O_CREAT|O_TRUNC
 #define NGX_FILE_APPEND          O_WRONLY|O_APPEND
+#define NGX_FILE_NONBLOCK        O_NONBLOCK
 
 #define NGX_FILE_DEFAULT_ACCESS  0644
 #define NGX_FILE_OWNER_ACCESS    0600
@@ -138,14 +148,22 @@ ngx_int_t ngx_set_file_time(u_char *name, ngx_fd_t fd, time_t s);
 #define ngx_fd_info(fd, sb)      fstat(fd, sb)
 #define ngx_fd_info_n            "fstat()"
 
+#define ngx_link_info(file, sb)  lstat((const char *) file, sb)
+#define ngx_link_info_n          "lstat()"
+
 #define ngx_is_dir(sb)           (S_ISDIR((sb)->st_mode))
 #define ngx_is_file(sb)          (S_ISREG((sb)->st_mode))
 #define ngx_is_link(sb)          (S_ISLNK((sb)->st_mode))
 #define ngx_is_exec(sb)          (((sb)->st_mode & S_IXUSR) == S_IXUSR)
 #define ngx_file_access(sb)      ((sb)->st_mode & 0777)
 #define ngx_file_size(sb)        (sb)->st_size
+#define ngx_file_fs_size(sb)     ((sb)->st_blocks * 512)
 #define ngx_file_mtime(sb)       (sb)->st_mtime
 #define ngx_file_uniq(sb)        (sb)->st_ino
+
+
+ngx_int_t ngx_create_file_mapping(ngx_file_mapping_t *fm);
+void ngx_close_file_mapping(ngx_file_mapping_t *fm);
 
 
 #if (NGX_HAVE_CASELESS_FILESYSTEM)

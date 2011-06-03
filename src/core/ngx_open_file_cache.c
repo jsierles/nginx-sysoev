@@ -155,6 +155,7 @@ ngx_open_cached_file(ngx_open_file_cache_t *cache, ngx_str_t *name,
             of->uniq = ngx_file_uniq(&fi);
             of->mtime = ngx_file_mtime(&fi);
             of->size = ngx_file_size(&fi);
+            of->fs_size = ngx_file_fs_size(&fi);
             of->is_dir = ngx_is_dir(&fi);
             of->is_file = ngx_is_file(&fi);
             of->is_link = ngx_is_link(&fi);
@@ -490,7 +491,14 @@ ngx_open_and_stat_file(u_char *name, ngx_open_file_info_t *of, ngx_log_t *log)
     }
 
     if (!of->log) {
-        fd = ngx_open_file(name, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
+
+        /*
+         * Use non-blocking open() not to hang on FIFO files, etc.
+         * This flag has no effect on a regular files.
+         */
+
+        fd = ngx_open_file(name, NGX_FILE_RDONLY|NGX_FILE_NONBLOCK,
+                           NGX_FILE_OPEN, 0);
 
     } else {
         fd = ngx_open_file(name, NGX_FILE_APPEND, NGX_FILE_CREATE_OR_OPEN,
@@ -550,6 +558,7 @@ done:
     of->uniq = ngx_file_uniq(&fi);
     of->mtime = ngx_file_mtime(&fi);
     of->size = ngx_file_size(&fi);
+    of->fs_size = ngx_file_fs_size(&fi);
     of->is_dir = ngx_is_dir(&fi);
     of->is_file = ngx_is_file(&fi);
     of->is_link = ngx_is_link(&fi);

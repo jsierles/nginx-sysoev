@@ -37,7 +37,8 @@
 #define NGX_HTTP_PROPPATCH                 0x0800
 #define NGX_HTTP_LOCK                      0x1000
 #define NGX_HTTP_UNLOCK                    0x2000
-#define NGX_HTTP_TRACE                     0x4000
+#define NGX_HTTP_PATCH                     0x4000
+#define NGX_HTTP_TRACE                     0x8000
 
 #define NGX_HTTP_CONNECTION_CLOSE          1
 #define NGX_HTTP_CONNECTION_KEEP_ALIVE     2
@@ -56,7 +57,7 @@
 #define NGX_HTTP_PARSE_INVALID_HEADER      13
 
 
-#define NGX_HTTP_ZERO_IN_URI               1
+/* unused                                  1 */
 #define NGX_HTTP_SUBREQUEST_IN_MEMORY      2
 #define NGX_HTTP_SUBREQUEST_WAITED         4
 #define NGX_HTTP_LOG_UNSAFE                8
@@ -64,12 +65,14 @@
 
 #define NGX_HTTP_OK                        200
 #define NGX_HTTP_CREATED                   201
+#define NGX_HTTP_ACCEPTED                  202
 #define NGX_HTTP_NO_CONTENT                204
 #define NGX_HTTP_PARTIAL_CONTENT           206
 
 #define NGX_HTTP_SPECIAL_RESPONSE          300
 #define NGX_HTTP_MOVED_PERMANENTLY         301
 #define NGX_HTTP_MOVED_TEMPORARILY         302
+#define NGX_HTTP_SEE_OTHER                 303
 #define NGX_HTTP_NOT_MODIFIED              304
 
 #define NGX_HTTP_BAD_REQUEST               400
@@ -92,7 +95,9 @@
 /* The special code to close connection without any response */
 #define NGX_HTTP_CLOSE                     444
 
-#define NGX_HTTP_OWN_CODES                 495
+#define NGX_HTTP_NGINX_CODES               494
+
+#define NGX_HTTP_REQUEST_HEADER_TOO_LARGE  494
 
 #define NGX_HTTPS_CERT_ERROR               495
 #define NGX_HTTPS_NO_CERT                  496
@@ -164,6 +169,7 @@ typedef struct {
     ngx_table_elt_t                  *host;
     ngx_table_elt_t                  *connection;
     ngx_table_elt_t                  *if_modified_since;
+    ngx_table_elt_t                  *if_unmodified_since;
     ngx_table_elt_t                  *user_agent;
     ngx_table_elt_t                  *referer;
     ngx_table_elt_t                  *content_length;
@@ -220,6 +226,7 @@ typedef struct {
     unsigned                          opera:1;
     unsigned                          gecko:1;
     unsigned                          chrome:1;
+    unsigned                          safari:1;
     unsigned                          konqueror:1;
 } ngx_http_headers_in_t;
 
@@ -434,11 +441,12 @@ struct ngx_http_request_s {
     /* URI with "+" */
     unsigned                          plus_in_uri:1;
 
-    /* URI with "\0" or "%00" */
-    unsigned                          zero_in_uri:1;
+    /* URI with " " */
+    unsigned                          space_in_uri:1;
 
     unsigned                          invalid_header:1;
 
+    unsigned                          add_uri_to_alias:1;
     unsigned                          valid_location:1;
     unsigned                          valid_unparsed_uri:1;
     unsigned                          uri_changed:1;
@@ -484,7 +492,6 @@ struct ngx_http_request_s {
     unsigned                          plain_http:1;
     unsigned                          chunked:1;
     unsigned                          header_only:1;
-    unsigned                          zero_body:1;
     unsigned                          keepalive:1;
     unsigned                          lingering_close:1;
     unsigned                          discard_body:1;

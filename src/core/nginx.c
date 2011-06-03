@@ -110,7 +110,7 @@ static ngx_command_t  ngx_core_commands[] = {
 
     { ngx_string("worker_rlimit_core"),
       NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_size_slot,
+      ngx_conf_set_off_slot,
       0,
       offsetof(ngx_core_conf_t, rlimit_core),
       NULL },
@@ -203,6 +203,10 @@ main(int argc, char *const *argv)
     ngx_cycle_t      *cycle, init_cycle;
     ngx_core_conf_t  *ccf;
 
+    if (ngx_strerror_init() != NGX_OK) {
+        return 1;
+    }
+
     if (ngx_get_options(argc, argv) != NGX_OK) {
         return 1;
     }
@@ -212,7 +216,7 @@ main(int argc, char *const *argv)
 
         if (ngx_show_help) {
             ngx_log_stderr(0,
-                "Usage: nginx [-?hvVt] [-s signal] [-c filename] "
+                "Usage: nginx [-?hvVtq] [-s signal] [-c filename] "
                              "[-p prefix] [-g directives]" CRLF CRLF
                 "Options:" CRLF
                 "  -?,-h         : this help" CRLF
@@ -220,6 +224,8 @@ main(int argc, char *const *argv)
                 "  -V            : show version and configure options then exit"
                                    CRLF
                 "  -t            : test configuration and exit" CRLF
+                "  -q            : suppress non-error messages "
+                                   "during configuration testing" CRLF
                 "  -s signal     : send signal to a master process: "
                                    "stop, quit, reopen, reload" CRLF
 #ifdef NGX_PREFIX
@@ -287,9 +293,6 @@ main(int argc, char *const *argv)
     init_cycle.log = log;
     ngx_cycle = &init_cycle;
 
-    /* dummy pagesize to create aligned pool */
-    ngx_pagesize = 1024;
-
     init_cycle.pool = ngx_create_pool(1024, log);
     if (init_cycle.pool == NULL) {
         return 1;
@@ -335,8 +338,11 @@ main(int argc, char *const *argv)
     }
 
     if (ngx_test_config) {
-        ngx_log_stderr(0, "configuration file %s test is successful",
-                       cycle->conf_file.data);
+        if (!ngx_quiet_mode) {
+            ngx_log_stderr(0, "configuration file %s test is successful",
+                           cycle->conf_file.data);
+        }
+
         return 0;
     }
 
@@ -688,6 +694,10 @@ ngx_get_options(int argc, char *const *argv)
                 ngx_test_config = 1;
                 break;
 
+            case 'q':
+                ngx_quiet_mode = 1;
+                break;
+
             case 'p':
                 if (*p) {
                     ngx_prefix = p;
@@ -862,14 +872,11 @@ ngx_process_options(ngx_cycle_t *cycle)
 #else
 
 #ifdef NGX_CONF_PREFIX
-        cycle->conf_prefix.len = sizeof(NGX_CONF_PREFIX) - 1;
-        cycle->conf_prefix.data = (u_char *) NGX_CONF_PREFIX;
+        ngx_str_set(&cycle->conf_prefix, NGX_CONF_PREFIX);
 #else
-        cycle->conf_prefix.len = sizeof(NGX_PREFIX) - 1;
-        cycle->conf_prefix.data = (u_char *) NGX_PREFIX;
+        ngx_str_set(&cycle->conf_prefix, NGX_PREFIX);
 #endif
-        cycle->prefix.len = sizeof(NGX_PREFIX) - 1;
-        cycle->prefix.data = (u_char *) NGX_PREFIX;
+        ngx_str_set(&cycle->prefix, NGX_PREFIX);
 
 #endif
     }
@@ -879,8 +886,7 @@ ngx_process_options(ngx_cycle_t *cycle)
         cycle->conf_file.data = ngx_conf_file;
 
     } else {
-        cycle->conf_file.len = sizeof(NGX_CONF_PATH) - 1;
-        cycle->conf_file.data = (u_char *) NGX_CONF_PATH;
+        ngx_str_set(&cycle->conf_file, NGX_CONF_PATH);
     }
 
     if (ngx_conf_full_name(cycle, &cycle->conf_file, 0) != NGX_OK) {
@@ -922,7 +928,7 @@ ngx_core_module_create_conf(ngx_cycle_t *cycle)
     }
 
     /*
-     * set by pcalloc()
+     * set by ngx_pcalloc()
      *
      *     ccf->pid = NULL;
      *     ccf->oldpid = NULL;
@@ -939,7 +945,7 @@ ngx_core_module_create_conf(ngx_cycle_t *cycle)
     ccf->debug_points = NGX_CONF_UNSET;
 
     ccf->rlimit_nofile = NGX_CONF_UNSET;
-    ccf->rlimit_core = NGX_CONF_UNSET_SIZE;
+    ccf->rlimit_core = NGX_CONF_UNSET;
     ccf->rlimit_sigpending = NGX_CONF_UNSET;
 
     ccf->user = (ngx_uid_t) NGX_CONF_UNSET_UINT;
@@ -996,8 +1002,7 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
 
 
     if (ccf->pid.len == 0) {
-        ccf->pid.len = sizeof(NGX_PID_PATH) - 1;
-        ccf->pid.data = (u_char *) NGX_PID_PATH;
+        ngx_str_set(&ccf->pid, NGX_PID_PATH);
     }
 
     if (ngx_conf_full_name(cycle, &ccf->pid, 0) != NGX_OK) {
@@ -1045,8 +1050,7 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
 
 
     if (ccf->lock_file.len == 0) {
-        ccf->lock_file.len = sizeof(NGX_LOCK_PATH) - 1;
-        ccf->lock_file.data = (u_char *) NGX_LOCK_PATH;
+        ngx_str_set(&ccf->lock_file, NGX_LOCK_PATH);
     }
 
     if (ngx_conf_full_name(cycle, &ccf->lock_file, 0) != NGX_OK) {

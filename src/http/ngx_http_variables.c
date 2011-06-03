@@ -196,7 +196,8 @@ static ngx_http_variable_t  ngx_http_core_variables[] = {
     { ngx_string("server_name"), NULL, ngx_http_variable_server_name, 0, 0, 0 },
 
     { ngx_string("request_method"), NULL,
-      ngx_http_variable_request_method, 0, 0, 0 },
+      ngx_http_variable_request_method, 0,
+      NGX_HTTP_VAR_NOCACHEABLE, 0 },
 
     { ngx_string("remote_user"), NULL, ngx_http_variable_remote_user, 0, 0, 0 },
 
@@ -440,8 +441,7 @@ ngx_http_get_flushed_variable(ngx_http_request_t *r, ngx_uint_t index)
 
 
 ngx_http_variable_value_t *
-ngx_http_get_variable(ngx_http_request_t *r, ngx_str_t *name, ngx_uint_t key,
-    ngx_uint_t nowarn)
+ngx_http_get_variable(ngx_http_request_t *r, ngx_str_t *name, ngx_uint_t key)
 {
     ngx_http_variable_t        *v;
     ngx_http_variable_value_t  *vv;
@@ -453,7 +453,7 @@ ngx_http_get_variable(ngx_http_request_t *r, ngx_str_t *name, ngx_uint_t key,
 
     if (v) {
         if (v->flags & NGX_HTTP_VAR_INDEXED) {
-            return ngx_http_get_indexed_variable(r, v->index);
+            return ngx_http_get_flushed_variable(r, v->index);
 
         } else {
 
@@ -494,7 +494,7 @@ ngx_http_get_variable(ngx_http_request_t *r, ngx_str_t *name, ngx_uint_t key,
         return NULL;
     }
 
-    if (ngx_strncmp(name->data, "upstream_http_", 10) == 0) {
+    if (ngx_strncmp(name->data, "upstream_http_", 14) == 0) {
 
         if (ngx_http_upstream_header_variable(r, vv, (uintptr_t) name)
             == NGX_OK)
@@ -524,11 +524,6 @@ ngx_http_get_variable(ngx_http_request_t *r, ngx_str_t *name, ngx_uint_t key,
     }
 
     vv->not_found = 1;
-
-    if (nowarn == 0) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                      "unknown \"%V\" variable", name);
-    }
 
     return vv;
 }
@@ -1395,8 +1390,7 @@ ngx_http_variable_sent_location(ngx_http_request_t *r,
         return NGX_OK;
     }
 
-    name.len = sizeof("sent_http_location") - 1;
-    name.data = (u_char *) "sent_http_location";
+    ngx_str_set(&name, "sent_http_location");
 
     return ngx_http_variable_unknown_header(v, &name,
                                             &r->headers_out.headers.part,
@@ -1666,6 +1660,66 @@ ngx_http_variable_pid(ngx_http_request_t *r,
 }
 
 
+void *
+ngx_http_map_find(ngx_http_request_t *r, ngx_http_map_t *map, ngx_str_t *match)
+{
+    void        *value;
+    u_char      *low;
+    size_t       len;
+    ngx_uint_t   key;
+
+    len = match->len;
+
+    if (len) {
+        low = ngx_pnalloc(r->pool, len);
+        if (low == NULL) {
+            return NULL;
+        }
+
+    } else {
+        low = NULL;
+    }
+
+    key = ngx_hash_strlow(low, match->data, len);
+
+    value = ngx_hash_find_combined(&map->hash, key, low, len);
+    if (value) {
+        return value;
+    }
+
+#if (NGX_PCRE)
+
+    if (len && map->nregex) {
+        ngx_int_t              n;
+        ngx_uint_t             i;
+        ngx_http_map_regex_t  *reg;
+
+        reg = map->regex;
+
+        for (i = 0; i < map->nregex; i++) {
+
+            n = ngx_http_regex_exec(r, reg[i].regex, match);
+
+            if (n == NGX_OK) {
+                return reg[i].value;
+            }
+
+            if (n == NGX_DECLINED) {
+                continue;
+            }
+
+            /* NGX_ERROR */
+
+            return NULL;
+        }
+    }
+
+#endif
+
+    return NULL;
+}
+
+
 #if (NGX_PCRE)
 
 static ngx_int_t
@@ -1743,7 +1797,7 @@ ngx_http_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
 
         v->get_handler = ngx_http_variable_not_found;
 
-        p += i + size;
+        p += size;
     }
 
     return re;
@@ -1936,6 +1990,7 @@ ngx_http_variables_init_vars(ngx_conf_t *cf)
         if (ngx_strncmp(v[i].name.data, "arg_", 4) == 0) {
             v[i].get_handler = ngx_http_variable_argument;
             v[i].data = (uintptr_t) &v[i].name;
+            v[i].flags = NGX_HTTP_VAR_NOCACHEABLE;
 
             continue;
         }
@@ -1977,88 +2032,4 @@ ngx_http_variables_init_vars(ngx_conf_t *cf)
     cmcf->variables_keys = NULL;
 
     return NGX_OK;
-}
-
-
-void
-ngx_http_variable_value_rbtree_insert(ngx_rbtree_node_t *temp,
-    ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel)
-{
-    ngx_rbtree_node_t               **p;
-    ngx_http_variable_value_node_t   *vvn, *vvt;
-
-    for ( ;; ) {
-
-        vvn = (ngx_http_variable_value_node_t *) node;
-        vvt = (ngx_http_variable_value_node_t *) temp;
-
-        if (node->key != temp->key) {
-
-            p = (node->key < temp->key) ? &temp->left : &temp->right;
-
-        } else if (vvn->len != vvt->len) {
-
-            p = (vvn->len < vvt->len) ? &temp->left : &temp->right;
-
-        } else {
-            p = (ngx_memcmp(vvn->value->data, vvt->value->data, vvn->len) < 0)
-                 ? &temp->left : &temp->right;
-        }
-
-        if (*p == sentinel) {
-            break;
-        }
-
-        temp = *p;
-    }
-
-    *p = node;
-    node->parent = temp;
-    node->left = sentinel;
-    node->right = sentinel;
-    ngx_rbt_red(node);
-}
-
-
-ngx_http_variable_value_t *
-ngx_http_variable_value_lookup(ngx_rbtree_t *rbtree, ngx_str_t *val,
-    uint32_t hash)
-{
-    ngx_int_t                        rc;
-    ngx_rbtree_node_t               *node, *sentinel;
-    ngx_http_variable_value_node_t  *vvn;
-
-    node = rbtree->root;
-    sentinel = rbtree->sentinel;
-
-    while (node != sentinel) {
-
-        vvn = (ngx_http_variable_value_node_t *) node;
-
-        if (hash != node->key) {
-            node = (hash < node->key) ? node->left : node->right;
-            continue;
-        }
-
-        if (val->len != vvn->len) {
-            node = (val->len < vvn->len) ? node->left : node->right;
-            continue;
-        }
-
-        rc = ngx_memcmp(val->data, vvn->value->data, val->len);
-
-        if (rc < 0) {
-            node = node->left;
-            continue;
-        }
-
-        if (rc > 0) {
-            node = node->right;
-            continue;
-        }
-
-        return vvn->value;
-    }
-
-    return NULL;
 }

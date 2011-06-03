@@ -110,7 +110,7 @@ ngx_inet6_addr(u_char *p, size_t len, u_char *addr)
         }
 
         if (c == '.' && nibbles) {
-            if (n < 2) {
+            if (n < 2 || digit == NULL) {
                 return NGX_ERROR;
             }
 
@@ -750,7 +750,6 @@ ngx_parse_inet_url(ngx_pool_t *pool, ngx_url_t *u)
             ngx_free(p);
 
             if (h == NULL || h->h_addr_list[0] == NULL) {
-                ngx_free(p);
                 u->err = "host not found";
                 return NGX_ERROR;
             }
@@ -944,7 +943,7 @@ ngx_inet_resolve_host(ngx_pool_t *pool, ngx_url_t *u)
 
         u->naddrs = i;
 
-        for (i = 0; h->h_addr_list[i] != NULL; i++) {
+        for (i = 0; i < u->naddrs; i++) {
 
             sin = ngx_pcalloc(pool, sizeof(struct sockaddr_in));
             if (sin == NULL) {

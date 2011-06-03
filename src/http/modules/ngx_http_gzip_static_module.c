@@ -89,10 +89,6 @@ ngx_http_gzip_static_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
-    if (r->zero_in_uri) {
-        return NGX_DECLINED;
-    }
-
     gzcf = ngx_http_get_module_loc_conf(r, ngx_http_gzip_static_module);
 
     if (!gzcf->enable) {
@@ -180,7 +176,7 @@ ngx_http_gzip_static_handler(ngx_http_request_t *r)
 #if !(NGX_WIN32) /* the not regular files are probably Unix specific */
 
     if (!of.is_file) {
-        ngx_log_error(NGX_LOG_CRIT, log, ngx_errno,
+        ngx_log_error(NGX_LOG_CRIT, log, 0,
                       "\"%s\" is not a regular file", path.data);
 
         return NGX_HTTP_NOT_FOUND;
@@ -212,12 +208,10 @@ ngx_http_gzip_static_handler(ngx_http_request_t *r)
     }
 
     h->hash = 1;
-    h->key.len = sizeof("Content-Encoding") - 1;
-    h->key.data = (u_char *) "Content-Encoding";
-    h->value.len = sizeof("gzip") - 1;
-    h->value.data = (u_char *) "gzip";
-
+    ngx_str_set(&h->key, "Content-Encoding");
+    ngx_str_set(&h->value, "gzip");
     r->headers_out.content_encoding = h;
+
     r->ignore_content_encoding = 1;
 
     /* we need to allocate all before the header would be sent */

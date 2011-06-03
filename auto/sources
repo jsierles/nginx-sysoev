@@ -22,6 +22,7 @@ CORE_DEPS="src/core/nginx.h \
            src/core/ngx_file.h \
            src/core/ngx_crc.h \
            src/core/ngx_crc32.h \
+           src/core/ngx_murmurhash.h \
            src/core/ngx_md5.h \
            src/core/ngx_sha1.h \
            src/core/ngx_rbtree.h \
@@ -33,7 +34,8 @@ CORE_DEPS="src/core/nginx.h \
            src/core/ngx_cycle.h \
            src/core/ngx_conf_file.h \
            src/core/ngx_resolver.h \
-           src/core/ngx_open_file_cache.h"
+           src/core/ngx_open_file_cache.h \
+           src/core/ngx_crypt.h"
 
 
 CORE_SRCS="src/core/nginx.c \
@@ -50,6 +52,8 @@ CORE_SRCS="src/core/nginx.c \
            src/core/ngx_inet.c \
            src/core/ngx_file.c \
            src/core/ngx_crc32.c \
+           src/core/ngx_murmurhash.c \
+           src/core/ngx_md5.c \
            src/core/ngx_rbtree.c \
            src/core/ngx_radix_tree.c \
            src/core/ngx_slab.c \
@@ -61,7 +65,8 @@ CORE_SRCS="src/core/nginx.c \
            src/core/ngx_cpuinfo.c \
            src/core/ngx_conf_file.c \
            src/core/ngx_resolver.c \
-           src/core/ngx_open_file_cache.c"
+           src/core/ngx_open_file_cache.c \
+           src/core/ngx_crypt.c"
 
 
 REGEX_DEPS=src/core/ngx_regex.h
@@ -387,6 +392,10 @@ HTTP_MAP_MODULE=ngx_http_map_module
 HTTP_MAP_SRCS=src/http/modules/ngx_http_map_module.c
 
 
+HTTP_SPLIT_CLIENTS_MODULE=ngx_http_split_clients_module
+HTTP_SPLIT_CLIENTS_SRCS=src/http/modules/ngx_http_split_clients_module.c
+
+
 HTTP_REFERER_MODULE=ngx_http_referer_module
 HTTP_REFERER_SRCS=src/http/modules/ngx_http_referer_module.c
 
@@ -406,6 +415,14 @@ HTTP_PROXY_SRCS=src/http/modules/ngx_http_proxy_module.c
 
 HTTP_FASTCGI_MODULE=ngx_http_fastcgi_module
 HTTP_FASTCGI_SRCS=src/http/modules/ngx_http_fastcgi_module.c
+
+
+HTTP_UWSGI_MODULE=ngx_http_uwsgi_module
+HTTP_UWSGI_SRCS=src/http/modules/ngx_http_uwsgi_module.c
+
+
+HTTP_SCGI_MODULE=ngx_http_scgi_module
+HTTP_SCGI_SRCS=src/http/modules/ngx_http_scgi_module.c
 
 
 HTTP_PERL_MODULE=ngx_http_perl_module

@@ -507,7 +507,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
 
             if (len) {
-                ngx_memcpy(b->start, start, len);
+                ngx_memmove(b->start, start, len);
             }
 
             size = (ssize_t) (file_size - cf->conf_file->file.offset);
@@ -671,7 +671,8 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 }
 
             } else if (ch == ' ' || ch == '\t' || ch == CR || ch == LF
-                       || ch == ';' || ch == '{') {
+                       || ch == ';' || ch == '{')
+            {
                 last_space = 1;
                 found = 1;
             }
@@ -903,8 +904,7 @@ ngx_conf_open_file(ngx_cycle_t *cycle, ngx_str_t *name)
     ngx_open_file_t  *file;
 
 #if (NGX_SUPPRESS_WARN)
-    full.len = 0;
-    full.data = NULL;
+    ngx_str_null(&full);
 #endif
 
     if (name->len) {
@@ -1006,7 +1006,7 @@ ngx_conf_flush_files(ngx_cycle_t *cycle)
 
 void ngx_cdecl
 ngx_conf_log_error(ngx_uint_t level, ngx_conf_t *cf, ngx_err_t err,
-    char *fmt, ...)
+    const char *fmt, ...)
 {
     u_char   errstr[NGX_MAX_CONF_ERRSTR], *p, *last;
     va_list  args;

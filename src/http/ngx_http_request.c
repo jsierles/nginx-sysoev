@@ -88,6 +88,10 @@ ngx_http_header_t  ngx_http_headers_in[] = {
                  offsetof(ngx_http_headers_in_t, if_modified_since),
                  ngx_http_process_unique_header_line },
 
+    { ngx_string("If-Unmodified-Since"),
+                 offsetof(ngx_http_headers_in_t, if_unmodified_since),
+                 ngx_http_process_unique_header_line },
+
     { ngx_string("User-Agent"), offsetof(ngx_http_headers_in_t, user_agent),
                  ngx_http_process_user_agent },
 
@@ -555,7 +559,7 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
     }
 
     if (n == 1) {
-        if (buf[0] == 0x80 /* SSLv2 */ || buf[0] == 0x16 /* SSLv3/TLSv1 */) {
+        if (buf[0] & 0x80 /* SSLv2 */ || buf[0] == 0x16 /* SSLv3/TLSv1 */) {
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, rev->log, 0,
                            "https ssl handshake: 0x%02Xd", buf[0]);
 
@@ -756,6 +760,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
             r->unparsed_uri.len = r->uri_end - r->uri_start;
             r->unparsed_uri.data = r->uri_start;
 
+            r->valid_unparsed_uri = r->space_in_uri ? 0 : 1;
 
             r->method_name.len = r->method_end - r->request_start + 1;
             r->method_name.data = r->request_line.data;
@@ -788,14 +793,31 @@ ngx_http_process_request_line(ngx_event_t *rev)
 
             p = r->uri.data + r->uri.len - 1;
 
-            if (*p == '.') {
+            while (p > r->uri.data) {
 
-                while (--p > r->uri.data && *p == '.') { /* void */ }
+                if (*p == ' ') {
+                    p--;
+                    continue;
+                }
 
+                if (*p == '.') {
+                    p--;
+                    continue;
+                }
+
+                if (ngx_strncasecmp(p - 6, (u_char *) "::$data", 7) == 0) {
+                    p -= 7;
+                    continue;
+                }
+
+                break;
+            }
+
+            if (p != r->uri.data + r->uri.len - 1) {
                 r->uri.len = p + 1 - r->uri.data;
-
                 ngx_http_set_exten(r);
             }
+
             }
 #endif
 
@@ -956,10 +978,13 @@ ngx_http_process_request_headers(ngx_event_t *rev)
                 if (rv == NGX_DECLINED) {
                     p = r->header_name_start;
 
+                    r->lingering_close = 1;
+
                     if (p == NULL) {
                         ngx_log_error(NGX_LOG_INFO, c->log, 0,
                                       "client sent too large request");
-                        ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+                        ngx_http_finalize_request(r,
+                                            NGX_HTTP_REQUEST_HEADER_TOO_LARGE);
                         return;
                     }
 
@@ -973,7 +998,9 @@ ngx_http_process_request_headers(ngx_event_t *rev)
                     ngx_log_error(NGX_LOG_INFO, c->log, 0,
                                   "client sent too long header line: \"%*s\"",
                                   len, r->header_name_start);
-                    ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+
+                    ngx_http_finalize_request(r,
+                                            NGX_HTTP_REQUEST_HEADER_TOO_LARGE);
                     return;
                 }
             }
@@ -1447,6 +1474,9 @@ ngx_http_process_user_agent(ngx_http_request_t *r, ngx_table_elt_t *h,
 
         } else if (ngx_strstrn(user_agent, "Chrome/", 7 - 1)) {
             r->headers_in.chrome = 1;
+
+        } else if (ngx_strstrn(user_agent, "Safari/", 7 - 1)) {
+            r->headers_in.safari = 1;
 
         } else if (ngx_strstrn(user_agent, "Konqueror", 9 - 1)) {
             r->headers_in.konqueror = 1;
@@ -1997,6 +2027,7 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
     }
 
     r->done = 1;
+    r->write_event_handler = ngx_http_request_empty_handler;
 
     if (!r->post_action) {
         r->request_complete = 1;
@@ -2563,6 +2594,7 @@ ngx_http_set_keepalive(ngx_http_request_t *r)
 #endif
 
     c->idle = 1;
+    ngx_reusable_connection(c, 1);
 
     if (rev->ready) {
         ngx_post_event(rev, &ngx_posted_events);
@@ -2672,6 +2704,7 @@ ngx_http_keepalive_handler(ngx_event_t *rev)
     c->log->action = "reading client request line";
 
     c->idle = 0;
+    ngx_reusable_connection(c, 0);
 
     ngx_http_init_request(rev);
 }

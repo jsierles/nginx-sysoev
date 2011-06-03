@@ -243,7 +243,6 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
     conf = ngx_http_get_module_loc_conf(r, ngx_http_gzip_filter_module);
 
     if (!conf->enable
-        || r->header_only
         || (r->headers_out.status != NGX_HTTP_OK
             && r->headers_out.status != NGX_HTTP_FORBIDDEN
             && r->headers_out.status != NGX_HTTP_NOT_FOUND)
@@ -251,12 +250,25 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
             && r->headers_out.content_encoding->value.len)
         || (r->headers_out.content_length_n != -1
             && r->headers_out.content_length_n < conf->min_length)
-        || ngx_http_test_content_type(r, &conf->types) == NULL)
+        || ngx_http_test_content_type(r, &conf->types) == NULL
+        || r->header_only)
     {
         return ngx_http_next_header_filter(r);
     }
 
     r->gzip_vary = 1;
+
+#if (NGX_HTTP_DEGRADATION)
+    {
+    ngx_http_core_loc_conf_t  *clcf;
+
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+    if (clcf->gzip_disable_degradation && ngx_http_degraded(r)) {
+        return ngx_http_next_header_filter(r);
+    }
+    }
+#endif
 
     if (!r->gzip_tested) {
         if (ngx_http_gzip_ok(r) != NGX_OK) {
@@ -285,11 +297,8 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
     }
 
     h->hash = 1;
-    h->key.len = sizeof("Content-Encoding") - 1;
-    h->key.data = (u_char *) "Content-Encoding";
-    h->value.len = sizeof("gzip") - 1;
-    h->value.data = (u_char *) "gzip";
-
+    ngx_str_set(&h->key, "Content-Encoding");
+    ngx_str_set(&h->value, "gzip");
     r->headers_out.content_encoding = h;
 
     r->main_filter_need_in_memory = 1;

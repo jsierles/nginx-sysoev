@@ -23,7 +23,7 @@
 #if (NGX_HAVE_GNU_CRYPT_R)
 
 ngx_int_t
-ngx_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
+ngx_libc_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
 {
     char               *value;
     size_t              len;
@@ -41,11 +41,11 @@ ngx_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
     err = ngx_errno;
 
     if (err == 0) {
-        len = ngx_strlen(value);
+        len = ngx_strlen(value) + 1;
 
         *encrypted = ngx_pnalloc(pool, len);
         if (*encrypted) {
-            ngx_memcpy(*encrypted, value, len + 1);
+            ngx_memcpy(*encrypted, value, len);
             return NGX_OK;
         }
     }
@@ -58,7 +58,7 @@ ngx_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
 #else
 
 ngx_int_t
-ngx_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
+ngx_libc_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
 {
     char       *value;
     size_t      len;
@@ -79,11 +79,11 @@ ngx_crypt(ngx_pool_t *pool, u_char *key, u_char *salt, u_char **encrypted)
     value = crypt((char *) key, (char *) salt);
 
     if (value) {
-        len = ngx_strlen(value);
+        len = ngx_strlen(value) + 1;
 
         *encrypted = ngx_pnalloc(pool, len);
         if (*encrypted) {
-            ngx_memcpy(*encrypted, value, len + 1);
+            ngx_memcpy(*encrypted, value, len);
         }
 
 #if (NGX_THREADS && NGX_NONREENTRANT_CRYPT)

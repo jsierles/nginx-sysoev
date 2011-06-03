@@ -26,6 +26,9 @@ static ngx_int_t ngx_http_add_address(ngx_conf_t *cf,
 static ngx_int_t ngx_http_add_server(ngx_conf_t *cf,
     ngx_http_core_srv_conf_t *cscf, ngx_http_conf_addr_t *addr);
 
+static char *ngx_http_merge_servers(ngx_conf_t *cf,
+    ngx_http_core_main_conf_t *cmcf, ngx_http_module_t *module,
+    ngx_uint_t ctx_index);
 static char *ngx_http_merge_locations(ngx_conf_t *cf,
     ngx_queue_t *locations, void **loc_conf, ngx_http_module_t *module,
     ngx_uint_t ctx_index);
@@ -263,39 +266,9 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             }
         }
 
-        for (s = 0; s < cmcf->servers.nelts; s++) {
-
-            /* merge the server{}s' srv_conf's */
-
-            if (module->merge_srv_conf) {
-                rv = module->merge_srv_conf(cf, ctx->srv_conf[mi],
-                                            cscfp[s]->ctx->srv_conf[mi]);
-                if (rv != NGX_CONF_OK) {
-                    goto failed;
-                }
-            }
-
-            if (module->merge_loc_conf) {
-
-                /* merge the server{}'s loc_conf */
-
-                rv = module->merge_loc_conf(cf, ctx->loc_conf[mi],
-                                            cscfp[s]->ctx->loc_conf[mi]);
-                if (rv != NGX_CONF_OK) {
-                    goto failed;
-                }
-
-                /* merge the locations{}' loc_conf's */
-
-                clcf = cscfp[s]->ctx->loc_conf[ngx_http_core_module.ctx_index];
-
-                rv = ngx_http_merge_locations(cf, clcf->locations,
-                                              cscfp[s]->ctx->loc_conf,
-                                              module, mi);
-                if (rv != NGX_CONF_OK) {
-                    goto failed;
-                }
-            }
+        rv = ngx_http_merge_servers(cf, cmcf, module, mi);
+        if (rv != NGX_CONF_OK) {
+            goto failed;
         }
     }
 
@@ -509,7 +482,7 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
             if (cmcf->phase_engine.server_rewrite_index == (ngx_uint_t) -1) {
                 cmcf->phase_engine.server_rewrite_index = n;
             }
-            checker = ngx_http_core_generic_phase;
+            checker = ngx_http_core_rewrite_phase;
 
             break;
 
@@ -526,7 +499,7 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
             if (cmcf->phase_engine.location_rewrite_index == (ngx_uint_t) -1) {
                 cmcf->phase_engine.location_rewrite_index = n;
             }
-            checker = ngx_http_core_generic_phase;
+            checker = ngx_http_core_rewrite_phase;
 
             break;
 
@@ -586,17 +559,83 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
 
 
 static char *
+ngx_http_merge_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
+    ngx_http_module_t *module, ngx_uint_t ctx_index)
+{
+    char                        *rv;
+    ngx_uint_t                   s;
+    ngx_http_conf_ctx_t         *ctx, saved;
+    ngx_http_core_loc_conf_t    *clcf;
+    ngx_http_core_srv_conf_t   **cscfp;
+
+    cscfp = cmcf->servers.elts;
+    ctx = (ngx_http_conf_ctx_t *) cf->ctx;
+    saved = *ctx;
+    rv = NGX_CONF_OK;
+
+    for (s = 0; s < cmcf->servers.nelts; s++) {
+
+        /* merge the server{}s' srv_conf's */
+
+        ctx->srv_conf = cscfp[s]->ctx->srv_conf;
+
+        if (module->merge_srv_conf) {
+            rv = module->merge_srv_conf(cf, saved.srv_conf[ctx_index],
+                                        cscfp[s]->ctx->srv_conf[ctx_index]);
+            if (rv != NGX_CONF_OK) {
+                goto failed;
+            }
+        }
+
+        if (module->merge_loc_conf) {
+
+            /* merge the server{}'s loc_conf */
+
+            ctx->loc_conf = cscfp[s]->ctx->loc_conf;
+
+            rv = module->merge_loc_conf(cf, saved.loc_conf[ctx_index],
+                                        cscfp[s]->ctx->loc_conf[ctx_index]);
+            if (rv != NGX_CONF_OK) {
+                goto failed;
+            }
+
+            /* merge the locations{}' loc_conf's */
+
+            clcf = cscfp[s]->ctx->loc_conf[ngx_http_core_module.ctx_index];
+
+            rv = ngx_http_merge_locations(cf, clcf->locations,
+                                          cscfp[s]->ctx->loc_conf,
+                                          module, ctx_index);
+            if (rv != NGX_CONF_OK) {
+                goto failed;
+            }
+        }
+    }
+
+failed:
+
+    *ctx = saved;
+
+    return rv;
+}
+
+
+static char *
 ngx_http_merge_locations(ngx_conf_t *cf, ngx_queue_t *locations,
     void **loc_conf, ngx_http_module_t *module, ngx_uint_t ctx_index)
 {
     char                       *rv;
     ngx_queue_t                *q;
+    ngx_http_conf_ctx_t        *ctx, saved;
     ngx_http_core_loc_conf_t   *clcf;
     ngx_http_location_queue_t  *lq;
 
     if (locations == NULL) {
         return NGX_CONF_OK;
     }
+
+    ctx = (ngx_http_conf_ctx_t *) cf->ctx;
+    saved = *ctx;
 
     for (q = ngx_queue_head(locations);
          q != ngx_queue_sentinel(locations);
@@ -605,6 +644,7 @@ ngx_http_merge_locations(ngx_conf_t *cf, ngx_queue_t *locations,
         lq = (ngx_http_location_queue_t *) q;
 
         clcf = lq->exact ? lq->exact : lq->inclusive;
+        ctx->loc_conf = clcf->loc_conf;
 
         rv = module->merge_loc_conf(cf, loc_conf[ctx_index],
                                     clcf->loc_conf[ctx_index]);
@@ -618,6 +658,8 @@ ngx_http_merge_locations(ngx_conf_t *cf, ngx_queue_t *locations,
             return rv;
         }
     }
+
+    *ctx = saved;
 
     return NGX_CONF_OK;
 }
@@ -1117,13 +1159,13 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         }
     }
 
-    sa = (struct sockaddr *) &lsopt->sockaddr;
+    sa = &lsopt->u.sockaddr;
 
     switch (sa->sa_family) {
 
 #if (NGX_HAVE_INET6)
     case AF_INET6:
-        sin6 = (struct sockaddr_in6 *) sa;
+        sin6 = &lsopt->u.sockaddr_in6;
         p = sin6->sin6_port;
         break;
 #endif
@@ -1135,7 +1177,7 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 #endif
 
     default: /* AF_INET */
-        sin = (struct sockaddr_in *) sa;
+        sin = &lsopt->u.sockaddr_in;
         p = sin->sin_port;
         break;
     }
@@ -1179,13 +1221,16 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 #if (NGX_HAVE_UNIX_DOMAIN)
     struct sockaddr_un    *saun;
 #endif
+#if (NGX_HTTP_SSL)
+    ngx_uint_t             ssl;
+#endif
 
     /*
      * we can not compare whole sockaddr struct's as kernel
      * may fill some fields in inherited sockaddr struct's
      */
 
-    sa = (struct sockaddr *) &lsopt->sockaddr;
+    sa = &lsopt->u.sockaddr;
 
     switch (sa->sa_family) {
 
@@ -1209,13 +1254,13 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         break;
     }
 
-    p = lsopt->sockaddr + off;
+    p = lsopt->u.sockaddr_data + off;
 
     addr = port->addrs.elts;
 
     for (i = 0; i < port->addrs.nelts; i++) {
 
-        if (ngx_memcmp(p, (u_char *) addr[i].opt.sockaddr + off, len) != 0) {
+        if (ngx_memcmp(p, addr[i].opt.u.sockaddr_data + off, len) != 0) {
             continue;
         }
 
@@ -1227,6 +1272,10 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 
         /* preserve default_server bit during listen options overwriting */
         default_server = addr[i].opt.default_server;
+
+#if (NGX_HTTP_SSL)
+        ssl = lsopt->ssl || addr[i].opt.ssl;
+#endif
 
         if (lsopt->set) {
 
@@ -1254,6 +1303,9 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         }
 
         addr[i].opt.default_server = default_server;
+#if (NGX_HTTP_SSL)
+        addr[i].opt.ssl = ssl;
+#endif
 
         return NGX_OK;
     }
@@ -1450,7 +1502,7 @@ ngx_http_server_names(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
             }
 
             if (rc == NGX_BUSY) {
-            ngx_log_error(NGX_LOG_WARN, cf->log, 0,
+                ngx_log_error(NGX_LOG_WARN, cf->log, 0,
                               "conflicting server name \"%V\" on %s, ignored",
                               &name[n].name, addr->opt.addr);
             }
@@ -1674,7 +1726,7 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
     ngx_http_core_loc_conf_t  *clcf;
     ngx_http_core_srv_conf_t  *cscf;
 
-    ls = ngx_create_listening(cf, addr->opt.sockaddr, addr->opt.socklen);
+    ls = ngx_create_listening(cf, &addr->opt.u.sockaddr, addr->opt.socklen);
     if (ls == NULL) {
         return NULL;
     }
@@ -1720,6 +1772,10 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
     ls->ipv6only = addr->opt.ipv6only;
 #endif
 
+#if (NGX_HAVE_SETFIB)
+    ls->setfib = addr->opt.setfib;
+#endif
+
     return ls;
 }
 
@@ -1743,7 +1799,7 @@ ngx_http_add_addrs(ngx_conf_t *cf, ngx_http_port_t *hport,
 
     for (i = 0; i < hport->naddrs; i++) {
 
-        sin = (struct sockaddr_in *) addr[i].opt.sockaddr;
+        sin = &addr[i].opt.u.sockaddr_in;
         addrs[i].addr = sin->sin_addr.s_addr;
         addrs[i].conf.default_server = addr[i].default_server;
 #if (NGX_HTTP_SSL)
@@ -1804,7 +1860,7 @@ ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
 
     for (i = 0; i < hport->naddrs; i++) {
 
-        sin6 = (struct sockaddr_in6 *) addr[i].opt.sockaddr;
+        sin6 = &addr[i].opt.u.sockaddr_in6;
         addrs6[i].addr6 = sin6->sin6_addr;
         addrs6[i].conf.default_server = addr[i].default_server;
 #if (NGX_HTTP_SSL)
@@ -1814,8 +1870,12 @@ ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
         if (addr[i].hash.buckets == NULL
             && (addr[i].wc_head == NULL
                 || addr[i].wc_head->hash.buckets == NULL)
-            && (addr[i].wc_head == NULL
-                || addr[i].wc_head->hash.buckets == NULL))
+            && (addr[i].wc_tail == NULL
+                || addr[i].wc_tail->hash.buckets == NULL)
+#if (NGX_PCRE)
+            && addr[i].nregex == 0
+#endif
+            )
         {
             continue;
         }

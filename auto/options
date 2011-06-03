@@ -52,6 +52,8 @@ NGX_HTTP_LOG_PATH=
 NGX_HTTP_CLIENT_TEMP_PATH=
 NGX_HTTP_PROXY_TEMP_PATH=
 NGX_HTTP_FASTCGI_TEMP_PATH=
+NGX_HTTP_UWSGI_TEMP_PATH=
+NGX_HTTP_SCGI_TEMP_PATH=
 
 HTTP_CACHE=YES
 HTTP_CHARSET=YES
@@ -74,10 +76,13 @@ HTTP_STATUS=NO
 HTTP_GEO=YES
 HTTP_GEOIP=NO
 HTTP_MAP=YES
+HTTP_SPLIT_CLIENTS=YES
 HTTP_REFERER=YES
 HTTP_REWRITE=YES
 HTTP_PROXY=YES
 HTTP_FASTCGI=YES
+HTTP_UWSGI=YES
+HTTP_SCGI=YES
 HTTP_PERL=NO
 HTTP_MEMCACHED=YES
 HTTP_LIMIT_ZONE=YES
@@ -184,6 +189,8 @@ do
         --http-client-body-temp-path=*)  NGX_HTTP_CLIENT_TEMP_PATH="$value" ;;
         --http-proxy-temp-path=*)        NGX_HTTP_PROXY_TEMP_PATH="$value" ;;
         --http-fastcgi-temp-path=*)      NGX_HTTP_FASTCGI_TEMP_PATH="$value" ;;
+        --http-uwsgi-temp-path=*)        NGX_HTTP_UWSGI_TEMP_PATH="$value" ;;
+        --http-scgi-temp-path=*)         NGX_HTTP_SCGI_TEMP_PATH="$value" ;;
 
         --with-http_ssl_module)          HTTP_SSL=YES               ;;
         --with-http_realip_module)       HTTP_REALIP=YES            ;;
@@ -209,10 +216,13 @@ do
         --without-http_status_module)    HTTP_STATUS=NO             ;;
         --without-http_geo_module)       HTTP_GEO=NO                ;;
         --without-http_map_module)       HTTP_MAP=NO                ;;
+        --without-http_split_clients_module) HTTP_SPLIT_CLIENTS=NO  ;;
         --without-http_referer_module)   HTTP_REFERER=NO            ;;
         --without-http_rewrite_module)   HTTP_REWRITE=NO            ;;
         --without-http_proxy_module)     HTTP_PROXY=NO              ;;
         --without-http_fastcgi_module)   HTTP_FASTCGI=NO            ;;
+        --without-http_uwsgi_module)     HTTP_UWSGI=NO              ;;
+        --without-http_scgi_module)      HTTP_SCGI=NO               ;;
         --without-http_memcached_module) HTTP_MEMCACHED=NO          ;;
         --without-http_limit_zone_module) HTTP_LIMIT_ZONE=NO        ;;
         --without-http_limit_req_module) HTTP_LIMIT_REQ=NO         ;;
@@ -341,10 +351,13 @@ cat << END
   --without-http_autoindex_module    disable ngx_http_autoindex_module
   --without-http_geo_module          disable ngx_http_geo_module
   --without-http_map_module          disable ngx_http_map_module
+  --without-http_split_clients_module disable ngx_http_split_clients_module
   --without-http_referer_module      disable ngx_http_referer_module
   --without-http_rewrite_module      disable ngx_http_rewrite_module
   --without-http_proxy_module        disable ngx_http_proxy_module
   --without-http_fastcgi_module      disable ngx_http_fastcgi_module
+  --without-http_uwsgi_module        disable ngx_http_uwsgi_module
+  --without-http_scgi_module         disable ngx_http_scgi_module
   --without-http_memcached_module    disable ngx_http_memcached_module
   --without-http_limit_zone_module   disable ngx_http_limit_zone_module
   --without-http_limit_req_module    disable ngx_http_limit_req_module
@@ -363,6 +376,8 @@ cat << END
   --http-proxy-temp-path=PATH        set path to the http proxy temporary files
   --http-fastcgi-temp-path=PATH      set path to the http fastcgi temporary
                                      files
+  --http-uwsgi-temp-path=PATH        set path to the http uwsgi temporary files
+  --http-scgi-temp-path=PATH         set path to the http scgi temporary files
 
   --without-http                     disable HTTP server
   --without-http-cache               disable HTTP cache
@@ -452,6 +467,8 @@ NGX_HTTP_LOG_PATH=${NGX_HTTP_LOG_PATH:-logs/access.log}
 NGX_HTTP_CLIENT_TEMP_PATH=${NGX_HTTP_CLIENT_TEMP_PATH:-client_body_temp}
 NGX_HTTP_PROXY_TEMP_PATH=${NGX_HTTP_PROXY_TEMP_PATH:-proxy_temp}
 NGX_HTTP_FASTCGI_TEMP_PATH=${NGX_HTTP_FASTCGI_TEMP_PATH:-fastcgi_temp}
+NGX_HTTP_UWSGI_TEMP_PATH=${NGX_HTTP_UWSGI_TEMP_PATH:-uwsgi_temp}
+NGX_HTTP_SCGI_TEMP_PATH=${NGX_HTTP_SCGI_TEMP_PATH:-scgi_temp}
 
 case ".$NGX_PERL_MODULES" in
     ./*)

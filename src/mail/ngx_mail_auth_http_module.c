@@ -1405,12 +1405,17 @@ ngx_mail_auth_http(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     ahcf->peer = u.addrs;
 
-    ahcf->host_header = u.host;
+    if (u.family != AF_UNIX) {
+        ahcf->host_header = u.host;
+
+    } else {
+        ngx_str_set(&ahcf->host_header, "localhost");
+    }
+
     ahcf->uri = u.uri;
 
     if (ahcf->uri.len == 0) {
-        ahcf->uri.len = sizeof("/") - 1;
-        ahcf->uri.data = (u_char *) "/";
+        ngx_str_set(&ahcf->uri, "/");
     }
 
     return NGX_CONF_OK;

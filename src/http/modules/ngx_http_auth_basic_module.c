@@ -7,6 +7,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include <ngx_crypt.h>
 
 
 #define NGX_HTTP_AUTH_BUF_SIZE  2048
@@ -248,7 +249,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
 
         if (state == sw_passwd) {
             left = left + n - passwd;
-            ngx_memcpy(buf, &buf[passwd], left);
+            ngx_memmove(buf, &buf[passwd], left);
             passwd = 0;
 
         } else {
@@ -348,8 +349,7 @@ ngx_http_auth_basic_set_realm(ngx_http_request_t *r, ngx_str_t *realm)
     }
 
     r->headers_out.www_authenticate->hash = 1;
-    r->headers_out.www_authenticate->key.len = sizeof("WWW-Authenticate") - 1;
-    r->headers_out.www_authenticate->key.data = (u_char *) "WWW-Authenticate";
+    ngx_str_set(&r->headers_out.www_authenticate->key, "WWW-Authenticate");
     r->headers_out.www_authenticate->value = *realm;
 
     return NGX_HTTP_UNAUTHORIZED;
@@ -425,9 +425,7 @@ ngx_http_auth_basic(ngx_conf_t *cf, void *post, void *data)
     u_char  *basic, *p;
 
     if (ngx_strcmp(realm->data, "off") == 0) {
-        realm->len = 0;
-        realm->data = (u_char *) "";
-
+        ngx_str_set(realm, "");
         return NGX_CONF_OK;
     }
 

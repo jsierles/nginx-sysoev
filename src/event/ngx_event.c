@@ -519,6 +519,7 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     shared = shm.addr;
 
     ngx_accept_mutex_ptr = (ngx_atomic_t *) shared;
+    ngx_accept_mutex.spin = (ngx_uint_t) -1;
 
     if (ngx_shmtx_create(&ngx_accept_mutex, shared, cycle->lock_file.data)
         != NGX_OK)
@@ -561,8 +562,6 @@ void
 ngx_timer_signal_handler(int signo)
 {
     ngx_event_timer_alarm = 1;
-
-    ngx_time_update(0, 0);
 
 #if 1
     ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ngx_cycle->log, 0, "timer signal");
